@@ -6,7 +6,7 @@ import vueDevTools from 'vite-plugin-vue-devtools'
 
 // https://vite.dev/config/
 export default defineConfig({
-  base: '/palace-visual-tang-song/',
+  base: './',
   plugins: [
     vue(),
     vueDevTools(),
