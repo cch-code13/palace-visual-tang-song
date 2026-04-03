@@ -1,0 +1,41 @@
+:root {
+  /* Element Plus 主色变量覆盖 */
+  --el-color-primary: #c44536;         /* 深红 */
+  --el-color-primary-light-3: #d66a5c;
+  --el-color-primary-light-5: #e88f82;
+  --el-color-primary-light-7: #faa496;
+  --el-color-primary-dark-2: #a63a2d;
+
+  --el-color-success: #e6b422;         /* 金色 */
+  --el-color-warning: #e6b422;         /* 金色 */
+  --el-color-danger: #c44536;         /* 深红 */
+  --el-color-info: #a6a6a6;
+
+  /* 背景与文字 */
+  --el-bg-color: #121212;              /* 背景色 */
+  --el-bg-color-overlay: #1e1e1e;
+  --el-text-color-primary: #ffffff;
+  --el-text-color-regular: #cccccc;
+  --el-border-color: rgba(230, 180, 34, 0.2);
+  --el-border-color-light: rgba(230, 180, 34, 0.1);
+
+  /* 自定义变量 */
+  --theme-shadow: 0 4px 20px rgba(0,0,0,0.4);
+  --theme-glow: 0 0 20px rgba(230, 180, 34, 0.3);
+  /* 渐变背景 */
+  --hero-gradient: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+  --bg-gradient: linear-gradient(135deg, #121212 0%, #1e1e1e 100%);
+  --card-bg: rgba(30,30,30,0.6);       /* 卡片半透明背景 */
+  /* 动画变量 */
+  --bg-animation-speed: 20s;
+  --animation-delay-1: 0s;
+  --animation-delay-2: 2s;
+  --animation-delay-3: 4s;
+  /* 响应式变量 */
+  --mobile-map-height: 400px;
+  --desktop-map-height: 550px;
+  /* 布局变量 */
+  --module-padding: 20px;
+  --module-margin: 24px;
+  --max-width: 1200px;
+}
