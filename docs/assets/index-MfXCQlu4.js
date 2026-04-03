@@ -1,0 +1,1 @@
+// JS content will be generated during build
