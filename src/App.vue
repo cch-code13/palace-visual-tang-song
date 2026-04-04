@@ -1,22 +1,25 @@
 <script setup>
 import palaces from '@/data/data.palaces.json'
-import { onMounted, onUnmounted, ref, computed, watch } from 'vue'
-import PalaceMapTang from './components/PalaceMapTang.vue'
-import PalaceMapSong from './components/PalaceMapSong.vue'
-import ChartCompareProvince from './components/ChartCompareProvince.vue'
-import CardPalaceItem from './components/CardPalaceItem.vue'
-import ModuleTimeline from './components/ModuleTimeline.vue'
-// 导入新的图表组件
-import ChartHeatMap from './components/ChartHeatMap.vue'
-import ChartCompareDynasty from './components/ChartCompareDynasty.vue'
-import ChartPieRegion from './components/ChartPieRegion.vue'
-import ChartBarArea from './components/ChartBarArea.vue'
-import ChartTrend from './components/ChartTrend.vue'
+import { onMounted, onUnmounted, ref, computed, watch, shallowRef, defineAsyncComponent } from 'vue'
+// 懒加载组件
+const PalaceMapTang = defineAsyncComponent(() => import('./components/PalaceMapTang.vue'))
+const PalaceMapSong = defineAsyncComponent(() => import('./components/PalaceMapSong.vue'))
+const ChartCompareProvince = defineAsyncComponent(() => import('./components/ChartCompareProvince.vue'))
+const CardPalaceItem = defineAsyncComponent(() => import('./components/CardPalaceItem.vue'))
+const ModuleTimeline = defineAsyncComponent(() => import('./components/ModuleTimeline.vue'))
+const ModuleTimelineEnhanced = defineAsyncComponent(() => import('./components/ModuleTimelineEnhanced.vue'))
+const ChartHeatMap = defineAsyncComponent(() => import('./components/ChartHeatMap.vue'))
+const ChartCompareDynasty = defineAsyncComponent(() => import('./components/ChartCompareDynasty.vue'))
+const ChartPieRegion = defineAsyncComponent(() => import('./components/ChartPieRegion.vue'))
+const ChartBarArea = defineAsyncComponent(() => import('./components/ChartBarArea.vue'))
+const ChartTrend = defineAsyncComponent(() => import('./components/ChartTrend.vue'))
 import { ElMessage } from 'element-plus'
 // 加载状态
 const isLoading = ref(true)
 const isFiltering = ref(false)
-const isChartLoading = ref({})
+const isChartLoading = shallowRef({})
+const isPageTransitioning = ref(false)
+const loadingProgress = ref(0)
 
 // 设置图表加载状态
 const setChartLoading = (chartName, loading) => {
@@ -28,7 +31,7 @@ const resetChartLoading = () => {
   isChartLoading.value = {}
 }
 
-// 动态计算统计数据
+// 动态计算统计数据 - 缓存结果
 const stats = computed(() => {
   const totalPalaces = palaces.length
   // 计算总建筑面积，统一单位为万平方米
@@ -45,6 +48,11 @@ const stats = computed(() => {
     { value: `${totalLocations}+`, target: totalLocations, label: '覆盖地区' },
   ]
 })
+// 缓存stats计算结果
+const cachedStats = shallowRef(null)
+watch(stats, (newStats) => {
+  cachedStats.value = newStats
+}, { immediate: true })
 
 // 数字滚动动画
 const animateValue = (element, start, end, duration) => {
@@ -67,29 +75,148 @@ const animateValue = (element, start, end, duration) => {
 
 // 数字动画已经在handleScroll函数中实现
 
+// 粒子背景相关变量
+const particlesContainer = ref(null)
+const particles = ref([])
+
+// 粒子背景初始化
+const initParticles = () => {
+  if (!particlesContainer.value) return
+  
+  // 清空现有粒子
+  particles.value = []
+  
+  // 创建粒子
+  for (let i = 0; i < 50; i++) {
+    createParticle()
+  }
+  
+  // 动画循环
+  animateParticles()
+}
+
+const createParticle = () => {
+  if (!particlesContainer.value) return
+  
+  const particle = document.createElement('div')
+  particle.className = 'particle'
+  
+  // 随机位置
+  const x = Math.random() * 100
+  const y = Math.random() * 100
+  
+  // 随机大小
+  const size = Math.random() * 5 + 1
+  
+  // 随机颜色
+  const colors = ['#e6b422', '#c44536', '#9c27b0', '#ffffff']
+  const color = colors[Math.floor(Math.random() * colors.length)]
+  
+  // 随机透明度
+  const opacity = Math.random() * 0.8 + 0.2
+  
+  // 随机速度
+  const speedX = (Math.random() - 0.5) * 0.5
+  const speedY = (Math.random() - 0.5) * 0.5
+  
+  // 设置样式
+  particle.style.position = 'absolute'
+  particle.style.left = `${x}%`
+  particle.style.top = `${y}%`
+  particle.style.width = `${size}px`
+  particle.style.height = `${size}px`
+  particle.style.borderRadius = '50%'
+  particle.style.backgroundColor = color
+  particle.style.opacity = opacity
+  particle.style.pointerEvents = 'none'
+  particle.style.zIndex = '1'
+  
+  // 添加到容器
+  particlesContainer.value.appendChild(particle)
+  
+  // 存储粒子信息
+  particles.value.push({
+    element: particle,
+    x,
+    y,
+    size,
+    speedX,
+    speedY
+  })
+}
+
+const animateParticles = () => {
+  if (!particlesContainer.value) return
+  
+  particles.value.forEach(particle => {
+    // 更新位置
+    particle.x += particle.speedX
+    particle.y += particle.speedY
+    
+    // 边界检查
+    if (particle.x < 0) particle.x = 100
+    if (particle.x > 100) particle.x = 0
+    if (particle.y < 0) particle.y = 100
+    if (particle.y > 100) particle.y = 0
+    
+    // 更新样式
+    particle.element.style.left = `${particle.x}%`
+    particle.element.style.top = `${particle.y}%`
+  })
+  
+  // 继续动画
+  requestAnimationFrame(animateParticles)
+}
+
 onMounted(() => {
+  // 初始化粒子背景
+  initParticles()
+
   // 初始化主题
   initTheme()
   
   // 加载历史记录
   loadHistoryRecords()
   
-  // 模拟数据加载
-  setTimeout(() => {
-    console.log(palaces)
-    filterPalaces() // 初始化筛选
-    window.addEventListener('scroll', handleScroll)
-    window.addEventListener('resize', handleResize)
-    window.addEventListener('keydown', handleKeydown)
-    handleScroll() // 初始检查
-    handleResize() // 初始检查
+  // 模拟数据加载和进度条动画
+  const totalLoadingTime = 1500
+  const progressInterval = 30
+  let currentProgress = 0
+  
+  const progressTimer = setInterval(() => {
+    currentProgress += Math.random() * 15
+    if (currentProgress >= 100) {
+      currentProgress = 100
+      clearInterval(progressTimer)
+      
+      // 进度完成后开始页面过渡
+      setTimeout(() => {
+        filterPalaces() // 初始化筛选
+        window.addEventListener('scroll', handleScroll)
+        window.addEventListener('resize', handleResize)
+        window.addEventListener('keydown', handleKeydown)
+        handleScroll() // 初始检查
+        handleResize() // 初始检查
 
-    // 强制显示宫殿详情卡片章节
-    showPalacesSection()
+        // 强制显示宫殿详情卡片章节
+        showPalacesSection()
 
-    // 加载完成
-    isLoading.value = false
-  }, 1500)
+        // 开始页面过渡动画
+        isPageTransitioning.value = true
+        
+        // 同时让加载页淡出和主内容淡入
+        setTimeout(() => {
+          isLoading.value = false
+          
+          // 立即开始主内容淡入
+          setTimeout(() => {
+            isPageTransitioning.value = false
+          }, 100)
+        }, 300)
+      }, 200)
+    }
+    loadingProgress.value = Math.min(currentProgress, 100)
+  }, progressInterval)
 })
 
 onUnmounted(() => {
@@ -139,7 +266,6 @@ const handleSelect = (key) => {
   
   // 特殊处理宫殿对比
   if (key === 'comparison-dialog') {
-    saveScrollPosition()
     showComparisonDialog.value = true
     // 滚动到页面底部
     window.scrollTo({ 
@@ -161,7 +287,6 @@ const handleMobileNavSelect = (key) => {
   
   // 特殊处理宫殿对比
   if (key === 'comparison-dialog') {
-    saveScrollPosition()
     showComparisonDialog.value = true
     // 滚动到页面底部
     window.scrollTo({ 
@@ -197,60 +322,63 @@ const trendChartRef = ref(null)
 // 防抖计时器
 let debounceTimer = null
 
-// 提取所有朝代选项
-const dynastyOptions = ['', ...new Set(palaces.map((palace) => palace.dynasty))]
+// 提取所有朝代选项 - 缓存结果
+const dynastyOptions = shallowRef(['', ...new Set(palaces.map((palace) => palace.dynasty))])
 
 // 面积筛选选项
-const areaOptions = [
+const areaOptions = shallowRef([
   { label: '全部', value: '' },
   { label: '1平方千米以下', value: 'less1' },
   { label: '1-2平方千米', value: '1-2' },
   { label: '2平方千米以上', value: 'more2' }
-]
+])
 
 // 排序选项
-const sortOptions = [
+const sortOptions = shallowRef([
   { label: '默认', value: '' },
   { label: '面积从大到小', value: 'desc' },
   { label: '面积从小到大', value: 'asc' }
-]
+])
 
 // 筛选宫殿
 const filteredPalaces = ref([])
 
+// 优化后的筛选函数
 const filterPalaces = () => {
   isFiltering.value = true
   
-  // 模拟筛选过程的延迟
-  setTimeout(() => {
+  // 使用requestAnimationFrame优化性能
+  requestAnimationFrame(() => {
     let result = palaces.filter((palace) => {
       const matchesSearch = palace.name.toLowerCase().includes(searchQuery.value.toLowerCase())
       const matchesDynasty = !dynastyFilter.value || palace.dynasty === dynastyFilter.value
       const matchesLocation = !locationFilter.value || palace.location.includes(locationFilter.value)
       
       // 面积筛选
-    let matchesArea = true
-    if (areaFilter.value) {
-      // 提取面积数值，去除单位
-      const area = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0
-      switch (areaFilter.value) {
-        case 'less1':
-          matchesArea = area < 100
-          break
-        case '1-2':
-          matchesArea = area >= 100 && area <= 200
-          break
-        case 'more2':
-          matchesArea = area > 200
-          break
+      let matchesArea = true
+      if (areaFilter.value) {
+        // 提取面积数值，去除单位
+        const area = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0
+        switch (areaFilter.value) {
+          case 'less1':
+            matchesArea = area < 100
+            break
+          case '1-2':
+            matchesArea = area >= 100 && area <= 200
+            break
+          case 'more2':
+            matchesArea = area > 200
+            break
+        }
       }
-    }
       
       return matchesSearch && matchesDynasty && matchesLocation && matchesArea
     })
     
     // 随机排序（打乱顺序）
-    result.sort(() => Math.random() - 0.5)
+    if (!sortBy.value) {
+      result.sort(() => Math.random() - 0.5)
+    }
     
     // 排序
     if (sortBy.value) {
@@ -265,17 +393,17 @@ const filterPalaces = () => {
     filteredPalaces.value = result
     currentPage.value = 1 // 重置到第一页
     isFiltering.value = false
-  }, 300)
+  })
 }
 
-// 搜索防抖函数
+// 搜索防抖函数 - 优化防抖时间
 const debouncedFilter = () => {
   if (debounceTimer) {
     clearTimeout(debounceTimer)
   }
   debounceTimer = setTimeout(() => {
     filterPalaces()
-  }, 300)
+  }, 200) // 减少防抖时间，提升响应速度
 }
 
 // 重置筛选
@@ -428,7 +556,6 @@ const handleKeydown = (event) => {
         restoreScrollPosition()
       } else if (showComparisonDialog.value) {
         showComparisonDialog.value = false
-        restoreScrollPosition()
       }
       break
 
@@ -453,8 +580,22 @@ const scrollToIntro = () => {
 // 数字动画触发标志
 const animationTriggered = ref(false)
 
-// 滚动动画逻辑
-const handleScroll = () => {
+// 节流函数
+const throttle = (func, delay) => {
+  let inThrottle
+  return function() {
+    const args = arguments
+    const context = this
+    if (!inThrottle) {
+      func.apply(context, args)
+      inThrottle = true
+      setTimeout(() => inThrottle = false, delay)
+    }
+  }
+}
+
+// 滚动动画逻辑 - 使用节流优化
+const handleScroll = throttle(() => {
   const elements = document.querySelectorAll('.scroll-animate')
   elements.forEach((element) => {
     const elementTop = element.getBoundingClientRect().top
@@ -485,7 +626,7 @@ const handleScroll = () => {
 
   // 更新回到顶部按钮显示状态
   showBackToTop.value = window.scrollY > 300
-}
+}, 16) // 约60fps的频率
 
 // 强制显示宫殿详情卡片章节
 const showPalacesSection = () => {
@@ -571,8 +712,6 @@ const scrollToMapSection = (location) => {
     
     // 延迟执行，确保地图已渲染
     setTimeout(() => {
-      // 触发地图定位逻辑
-      console.log('定位到地点:', location)
       // 调用地图组件的定位方法
       if (window.locateProvince) {
         // 提取省份信息
@@ -629,10 +768,14 @@ const getPalaceQuote = (palaceName) => {
   return quotes[palaceName] || '宫殿华章，千古流芳'
 }
 
-// 数据导出功能
+// 导入PDF生成库
+import jsPDF from 'jspdf'
+import html2canvas from 'html2canvas'
+
+// 数据导出功能 - 增强版
 const exportToCSV = () => {
   // 构建CSV内容
-  const headers = ['宫殿名称', '朝代', '地点', '建造年份', '建筑面积(万平方米)', '主要建筑', '历史意义']
+  const headers = ['宫殿名称', '朝代', '地点', '建造年份', '建筑面积(万平方米)', '主要建筑', '历史意义', '面阔/开间', '屋顶样式', '保存状态', '所属帝王', '文化等级', '相关诗句']
   const rows = palaces.map(palace => [
     palace.name,
     palace.dynasty,
@@ -640,7 +783,13 @@ const exportToCSV = () => {
     palace.buildYear,
     palace.area,
     palace.mainHall ? palace.mainHall : '',
-    palace.value
+    palace.value,
+    palace.dimensions ? palace.dimensions : '',
+    palace.roofStyle ? palace.roofStyle : '',
+    palace.preservationStatus ? palace.preservationStatus : '',
+    palace.associatedEmperor ? palace.associatedEmperor : '',
+    palace.culturalLevel ? palace.culturalLevel : '',
+    palace.relatedPoem ? palace.relatedPoem : ''
   ])
   
   // 组合CSV内容，添加BOM以确保UTF-8编码
@@ -659,52 +808,245 @@ const exportToCSV = () => {
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+  
+  ElMessage.success('CSV导出成功')
 }
 
-const exportToPDF = () => {
-  // 构建包含统计数据和简要说明的内容
-  const totalPalaces = palaces.length
-  // 计算总建筑面积，统一单位为万平方米
-  const totalArea = palaces.reduce((sum, palace) => {
-    // 提取面积数值，去除单位
-    const areaValue = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0
-    return sum + areaValue
-  }, 0)
-  const totalLocations = new Set(palaces.map(palace => palace.location)).size
-  
-  const content = `宫阙万象·唐宋宫殿建筑数据可视化\n\n` +
-    `统计数据：\n` +
-    `收录宫殿：${totalPalaces} 座\n` +
-    `总建筑面积：${totalArea.toFixed(1)} 万平方米\n` +
-    `覆盖地区：${totalLocations} 个\n\n` +
-    `简要说明：\n` +
-    `本数据来源于历史文献和考古资料，展示了唐宋两代宫殿建筑的分布情况。\n` +
-    `数据统计时间：2026年3月\n\n` +
-    `数据局限性：\n` +
-    `1. 部分宫殿的具体面积可能存在争议，本数据基于现有考古资料。\n` +
-    `2. 由于历史变迁，部分宫殿的准确位置可能难以确定。\n` +
-    `3. 宫殿的建造年份可能存在一定误差，本数据基于历史文献记载。\n` +
-    `4. 部分宫殿可能经过多次修缮和扩建，本数据反映的是其鼎盛时期的规模。\n\n` +
-    `宫殿详情：\n\n` +
-    palaces.map(palace => {
-      return `${palace.name} (${palace.dynasty}, ${palace.location})\n建造年份: ${palace.buildYear}\n建筑面积: ${palace.area}\n主要建筑: ${palace.mainHall ? palace.mainHall : '无'}\n历史意义: ${palace.value}\n\n`
-    }).join('')
-  
-  const blob = new Blob([content], { type: 'text/plain;charset=utf-8;' })
-  const url = URL.createObjectURL(blob)
-  const link = document.createElement('a')
-  link.setAttribute('href', url)
-  link.setAttribute('download', '宫殿建筑数据.txt')
-  link.style.visibility = 'hidden'
-  document.body.appendChild(link)
-  link.click()
-  document.body.removeChild(link)
-  
-  // 提示用户
-  ElMessage({ 
-    message: 'PDF导出功能正在开发中，当前已导出为文本文件，包含统计数据和简要说明', 
-    type: 'info' 
-  })
+const exportToPDF = async () => {
+  try {
+    ElMessage({ 
+      message: '正在生成PDF，请稍候...', 
+      type: 'info' 
+    })
+    
+    // 统计数据
+    const totalPalaces = palaces.length
+    const totalArea = palaces.reduce((sum, palace) => {
+      const areaValue = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0
+      return sum + areaValue
+    }, 0)
+    const totalLocations = new Set(palaces.map(palace => palace.location)).size
+    const tangPalaces = palaces.filter(p => p.dynasty === '唐代').length
+    const songPalaces = palaces.filter(p => p.dynasty === '宋代').length
+    
+    // 构建HTML内容 - 使用中文友好的样式
+    let htmlContent = `
+      <div style="padding: 40px; font-family: 'Microsoft YaHei', 'SimHei', sans-serif; background: white; color: #333;">
+        <div style="text-align: center; margin-bottom: 40px; border-bottom: 3px solid #c44536; padding-bottom: 20px;">
+          <h1 style="font-size: 28px; font-weight: bold; margin-bottom: 10px; color: #c44536;">宫阙万象·唐宋宫殿建筑数据可视化</h1>
+          <p style="font-size: 14px; color: #666;">中华优秀传统文化系列之六</p>
+        </div>
+        
+        <div style="margin-bottom: 30px; background: #f9f9f9; padding: 20px; border-radius: 8px; border-left: 4px solid #e6b422;">
+          <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #333;">📊 统计数据</h2>
+          <div style="display: flex; flex-wrap: wrap; gap: 20px;">
+            <div style="flex: 1; min-width: 150px; text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="font-size: 24px; font-weight: bold; color: #c44536;">${totalPalaces}</div>
+              <div style="font-size: 12px; color: #666;">收录宫殿（座）</div>
+            </div>
+            <div style="flex: 1; min-width: 150px; text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="font-size: 24px; font-weight: bold; color: #c44536;">${tangPalaces}</div>
+              <div style="font-size: 12px; color: #666;">唐代宫殿（座）</div>
+            </div>
+            <div style="flex: 1; min-width: 150px; text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="font-size: 24px; font-weight: bold; color: #c44536;">${songPalaces}</div>
+              <div style="font-size: 12px; color: #666;">宋代宫殿（座）</div>
+            </div>
+            <div style="flex: 1; min-width: 150px; text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="font-size: 24px; font-weight: bold; color: #c44536;">${totalArea.toFixed(1)}</div>
+              <div style="font-size: 12px; color: #666;">总建筑面积（万平方米）</div>
+            </div>
+            <div style="flex: 1; min-width: 150px; text-align: center; padding: 15px; background: white; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.1);">
+              <div style="font-size: 24px; font-weight: bold; color: #c44536;">${totalLocations}</div>
+              <div style="font-size: 12px; color: #666;">覆盖地区（个）</div>
+            </div>
+          </div>
+        </div>
+        
+        <div style="margin-bottom: 30px; background: #f0f7ff; padding: 20px; border-radius: 8px; border-left: 4px solid #1890ff;">
+          <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #333;">📝 简要说明</h2>
+          <p style="margin-bottom: 8px; font-size: 14px; line-height: 1.6; color: #333;">本数据来源于历史文献和考古资料，展示了唐宋两代宫殿建筑的分布情况。</p>
+          <p style="font-size: 14px; color: var(--text-body, #333333);">数据统计时间：2026年2月</p>
+        </div>
+        
+        <div style="margin-bottom: 30px; background: #fff7f0; padding: 20px; border-radius: 8px; border-left: 4px solid #fa8c16;">
+          <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #333;">⚠️ 数据局限性</h2>
+          <ol style="padding-left: 20px; margin: 0;">
+            <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.6; color: #333;">部分宫殿的具体面积可能存在争议，本数据基于现有考古资料。</li>
+            <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.6; color: #333;">由于历史变迁，部分宫殿的准确位置可能难以确定。</li>
+            <li style="margin-bottom: 8px; font-size: 14px; line-height: 1.6; color: #333;">宫殿的建造年份可能存在一定误差，本数据基于历史文献记载。</li>
+            <li style="font-size: 14px; line-height: 1.6; color: #333;">部分宫殿可能经过多次修缮和扩建，本数据反映的是其鼎盛时期的规模。</li>
+          </ol>
+        </div>
+        
+        <div style="margin-bottom: 20px;">
+          <h2 style="font-size: 20px; font-weight: bold; margin-bottom: 20px; color: #333; border-bottom: 2px solid #e6b422; padding-bottom: 10px;">🏛️ 宫殿详情</h2>
+    `
+    
+    // 添加宫殿详情
+    palaces.forEach((palace, index) => {
+      htmlContent += `
+        <div style="margin-bottom: 25px; padding: 20px; background: #fafafa; border-radius: 8px; border: 1px solid #e8e8e8; page-break-inside: avoid;">
+          <h3 style="font-size: 18px; font-weight: bold; margin-bottom: 15px; color: #c44536; border-bottom: 1px solid #e8e8e8; padding-bottom: 8px;">
+            ${palace.name} <span style="font-size: 14px; color: #666; font-weight: normal;">(${palace.dynasty} · ${palace.location})</span>
+          </h3>
+          <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; font-size: 13px;">
+            <div style="padding: 8px; background: white; border-radius: 4px;"><strong style="color: #666;">建造年份：</strong><span style="color: #333;">${palace.buildYear}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px;"><strong style="color: #666;">建筑面积：</strong><span style="color: #333;">${palace.area}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px; grid-column: span 2;"><strong style="color: #666;">主要建筑：</strong><span style="color: #333;">${palace.mainHall ? palace.mainHall : '无'}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px;"><strong style="color: #666;">面阔/开间：</strong><span style="color: #333;">${palace.dimensions ? palace.dimensions : '无'}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px;"><strong style="color: #666;">屋顶样式：</strong><span style="color: #333;">${palace.roofStyle ? palace.roofStyle : '无'}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px;"><strong style="color: #666;">保存状态：</strong><span style="color: #333;">${palace.preservationStatus ? palace.preservationStatus : '无'}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px;"><strong style="color: #666;">所属帝王：</strong><span style="color: #333;">${palace.associatedEmperor ? palace.associatedEmperor : '无'}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px;"><strong style="color: #666;">文化等级：</strong><span style="color: #333;">${palace.culturalLevel ? palace.culturalLevel : '无'}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px; grid-column: span 2;"><strong style="color: #666;">相关诗句：</strong><span style="color: #8b4513; font-style: italic;">${palace.relatedPoem ? palace.relatedPoem : '无'}</span></div>
+            <div style="padding: 8px; background: white; border-radius: 4px; grid-column: span 2;"><strong style="color: #666;">历史意义：</strong><span style="color: #333; line-height: 1.5;">${palace.value}</span></div>
+          </div>
+        </div>
+      `
+    })
+    
+    htmlContent += `
+        </div>
+        
+        <div style="margin-top: 40px; padding-top: 20px; border-top: 1px solid #e8e8e8; text-align: center; font-size: 12px; color: #999;">
+          <p>本报告由《宫阙万象·唐宋宫殿建筑数据可视化》系统自动生成</p>
+          <p>生成时间：${new Date().toLocaleString('zh-CN')}</p>
+        </div>
+      </div>
+    `
+    
+    // 创建临时容器
+    const tempContainer = document.createElement('div')
+    tempContainer.style.cssText = 'position: fixed; left: -9999px; top: 0; width: 794px; z-index: -9999;'
+    tempContainer.innerHTML = htmlContent
+    document.body.appendChild(tempContainer)
+    
+    // 等待DOM渲染
+    await new Promise(resolve => setTimeout(resolve, 100))
+    
+    // 使用html2canvas渲染为图片
+    const canvas = await html2canvas(tempContainer, {
+      scale: 2,
+      useCORS: true,
+      logging: false,
+      backgroundColor: '#ffffff',
+      width: 794,
+      height: tempContainer.scrollHeight
+    })
+    
+    // 清理临时容器
+    document.body.removeChild(tempContainer)
+    
+    // 创建PDF
+    const pdf = new jsPDF({ 
+      orientation: 'portrait', 
+      unit: 'mm', 
+      format: 'a4'
+    })
+    
+    const imgData = canvas.toDataURL('image/png')
+    const imgWidth = 210 // A4宽度(mm)
+    const pageHeight = 297 // A4高度(mm)
+    const imgHeight = (canvas.height * imgWidth) / canvas.width
+    
+    let heightLeft = imgHeight
+    let position = 0
+    
+    // 添加第一页
+    pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+    heightLeft -= pageHeight
+    
+    // 如果内容超过一页，添加后续页面
+    while (heightLeft > 0) {
+      position = heightLeft - imgHeight
+      pdf.addPage()
+      pdf.addImage(imgData, 'PNG', 0, position, imgWidth, imgHeight)
+      heightLeft -= pageHeight
+    }
+    
+    // 保存PDF
+    pdf.save('宫殿建筑数据.pdf')
+    
+    ElMessage.success('PDF导出成功')
+  } catch (error) {
+    ElMessage.error('PDF导出失败，请稍后重试')
+  }
+}
+    
+
+
+// 导出为JSON格式
+const exportToJSON = () => {
+  try {
+    const exportData = {
+      metadata: {
+        title: '宫阙万象·唐宋宫殿建筑数据',
+        exportDate: new Date().toISOString(),
+        totalPalaces: palaces.length,
+        tangPalaces: palaces.filter(p => p.dynasty === '唐代').length,
+        songPalaces: palaces.filter(p => p.dynasty === '宋代').length,
+        totalArea: palaces.reduce((sum, palace) => {
+          const areaValue = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0
+          return sum + areaValue
+        }, 0),
+        totalLocations: new Set(palaces.map(palace => palace.location)).size
+      },
+      palaces: palaces
+    }
+    
+    const jsonContent = JSON.stringify(exportData, null, 2)
+    const blob = new Blob([jsonContent], { type: 'application/json;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    
+    // 创建下载链接
+    const link = document.createElement('a')
+    link.href = url
+    link.download = '宫殿建筑数据.json'
+    link.style.display = 'none'
+    
+    // 添加到DOM并触发点击
+    document.body.appendChild(link)
+    
+    // 使用setTimeout确保DOM更新后再触发下载
+    setTimeout(() => {
+      link.click()
+      
+      // 延迟清理资源，确保下载开始
+      setTimeout(() => {
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+        ElMessage.success('JSON导出成功，文件已下载到默认下载文件夹')
+      }, 1000)
+    }, 100)
+    
+  } catch (error) {
+    console.error('JSON导出失败:', error)
+    ElMessage.error('JSON导出失败，请稍后重试')
+  }
+}
+
+// 显示导出菜单
+const showExportMenu = ref(false)
+const toggleExportMenu = () => {
+  showExportMenu.value = !showExportMenu.value
+}
+
+// 处理导出命令
+const handleExportCommand = (command) => {
+  switch (command) {
+    case 'csv':
+      exportToCSV()
+      break
+    case 'pdf':
+      exportToPDF()
+      break
+    case 'json':
+      exportToJSON()
+      break
+    default:
+      break
+  }
 }
 
 // 处理地图点击事件
@@ -806,9 +1148,9 @@ const addHistoryRecord = (palace) => {
     timestamp: new Date().getTime()
   })
   
-  // 限制历史记录数量为10条
-  if (historyRecords.value.length > 10) {
-    historyRecords.value = historyRecords.value.slice(0, 10)
+  // 限制历史记录数量为15条
+  if (historyRecords.value.length > 15) {
+    historyRecords.value = historyRecords.value.slice(0, 15)
   }
   
   // 保存到本地存储
@@ -819,6 +1161,7 @@ const addHistoryRecord = (palace) => {
 const clearHistoryRecords = () => {
   historyRecords.value = []
   localStorage.removeItem('palaceHistory')
+  ElMessage.success('历史记录已清空')
 }
 
 // 从历史记录中打开宫殿详情
@@ -834,6 +1177,94 @@ const openHistoryPalace = (palaceId) => {
 const openHistoryDialog = () => {
   saveScrollPosition()
   showHistoryDialog.value = true
+}
+
+// 快速回到上次查看的宫殿
+const goToLastViewedPalace = () => {
+  if (historyRecords.value.length > 0) {
+    const lastRecord = historyRecords.value[0]
+    const palace = palaces.find(p => p.id == lastRecord.id)
+    if (palace) {
+      handlePalaceClick(palace)
+      ElMessage.success(`已回到上次查看的宫殿：${palace.name}`)
+    }
+  } else {
+    ElMessage.info('暂无历史记录')
+  }
+}
+
+// 按朝代筛选历史记录
+const historyDynastyFilter = ref('')
+const filteredHistoryRecords = computed(() => {
+  if (!historyDynastyFilter.value) {
+    return historyRecords.value
+  }
+  return historyRecords.value.filter(record => record.dynasty === historyDynastyFilter.value)
+})
+
+// 格式化时间戳
+const formatTimestamp = (timestamp) => {
+  const date = new Date(timestamp)
+  return date.toLocaleString('zh-CN', {
+    year: 'numeric',
+    month: '2-digit',
+    day: '2-digit',
+    hour: '2-digit',
+    minute: '2-digit'
+  })
+}
+
+// 增强版时间轴事件处理
+const handleTimeSelect = (data) => {
+  // 根据选中的时间点，筛选对应时期的宫殿
+  const year = data.year
+  const periodPalaces = palaces.filter(p => {
+    const buildYear = parseInt(p.buildYear)
+    return buildYear >= year - 20 && buildYear <= year + 20
+  })
+  
+  if (periodPalaces.length > 0) {
+    // 高亮显示对应宫殿
+    ElMessage({
+      message: `${data.year}年：${data.title}，该时期有 ${periodPalaces.length} 座宫殿`,
+      type: 'info',
+      duration: 3000
+    })
+    
+    // 可以在这里添加更多联动逻辑，比如滚动到宫殿列表
+  }
+}
+
+const handlePeriodFilter = ({ dynasty, period }) => {
+  // 根据筛选条件更新其他图表
+  let message = '筛选：'
+  if (dynasty !== 'all') {
+    message += dynasty === 'tang' ? '唐代' : '宋代'
+  } else {
+    message += '全部朝代'
+  }
+  if (period !== 'all') {
+    message += ` · ${period}`
+  }
+  
+  ElMessage({
+    message: message,
+    type: 'success'
+  })
+}
+
+const handlePlayStart = () => {
+  ElMessage({
+    message: '开始播放历史进程...',
+    type: 'info'
+  })
+}
+
+const handlePlayEnd = () => {
+  ElMessage({
+    message: '历史进程播放结束',
+    type: 'success'
+  })
 }
 
 // 宫殿对比数据计算属性
@@ -860,16 +1291,29 @@ const comparisonData = computed(() => {
 <template>
   <div class="app-container">
     <!-- 加载动画 -->
-      <div v-if="isLoading" class="loading-container">
-        <div class="loading-spinner">
+      <div v-if="isLoading" class="loading-container" :class="{ 'dark': isDarkMode, 'exiting': isPageTransitioning }">
+        <!-- 粒子背景 -->
+        <div class="particles-container" ref="particlesContainer"></div>
+        
+        <div class="loading-spinner" :class="{ 'exiting': isPageTransitioning }">
           <div class="spinner">
             <div class="scroll-content"></div>
           </div>
-          <p class="loading-text">加载中...</p>
+          <h2 class="loading-title" :class="{ 'dark': isDarkMode }">宫阙万象</h2>
+          <p class="loading-subtitle" :class="{ 'dark': isDarkMode }">唐宋宫殿数据可视化</p>
+          <p class="loading-text" :class="{ 'dark': isDarkMode }">加载中...</p>
+          
+          <!-- 进度条 -->
+          <div class="progress-container" :class="{ 'dark': isDarkMode }">
+            <div class="progress-bar" :style="{ width: loadingProgress + '%' }"></div>
+          </div>
+          
+          <!-- 加载百分比 -->
+          <p class="loading-percentage" :class="{ 'dark': isDarkMode }">{{ Math.round(loadingProgress) }}%</p>
         </div>
       </div>
 
-    <div v-else>
+    <div v-else class="main-content fade-in">
       <div class="background-animation"></div>
       <div class="background-shapes"></div>
 
@@ -906,7 +1350,7 @@ const comparisonData = computed(() => {
       </div>
 
       <!-- 顶部控制按钮 -->
-      <div class="top-controls" style="position: fixed; top: 20px; right: 20px; z-index: 1000; display: flex; gap: 1rem; align-items: center;">
+      <div class="top-controls">
         <!-- 历史记录按钮 -->
         <el-button 
           type="primary" 
@@ -939,7 +1383,7 @@ const comparisonData = computed(() => {
       >
         <div class="drawer-header">
           <h3 class="drawer-title">宫阙万象·唐宋宫殿建筑数据可视化</h3>
-          <el-button type="text" @click="mobileNavVisible = false" class="close-button">
+          <el-button link @click="mobileNavVisible = false" class="close-button">
             <el-icon><i class="el-icon-close"/></el-icon>
           </el-button>
         </div>
@@ -954,6 +1398,14 @@ const comparisonData = computed(() => {
             >
               <div class="mobile-nav-icon"><i :class="item.icon"/></div>
               <div class="mobile-nav-text">{{ item.label }}</div>
+            </li>
+            <li
+              v-show="showBackToTop"
+              @click="backToTop"
+              class="mobile-nav-item back-to-top-item"
+            >
+              <div class="mobile-nav-icon"><i class="el-icon-arrow-up"/></div>
+              <div class="mobile-nav-text">回到顶部</div>
             </li>
           </ul>
         </div>
@@ -994,17 +1446,32 @@ const comparisonData = computed(() => {
               </div>
             </div>
             <div class="export-buttons" style="margin-top: 2rem; text-align: center">
-              <el-button type="primary" @click="exportToCSV" style="margin-right: 1rem">
-                <el-icon><i class="el-icon-download"></i></el-icon>
-                导出CSV
-              </el-button>
-              <el-button type="success" @click="exportToPDF">
-                <el-icon><i class="el-icon-download"></i></el-icon>
-                导出PDF
-              </el-button>
+              <el-dropdown trigger="click" @command="handleExportCommand">
+                <el-button type="primary">
+                  <el-icon><i class="el-icon-download"></i></el-icon>
+                  导出数据
+                  <el-icon class="el-icon--right"><i class="el-icon-arrow-down"></i></el-icon>
+                </el-button>
+                <template #dropdown>
+                  <el-dropdown-menu>
+                    <el-dropdown-item command="csv">
+                      <el-icon><i class="el-icon-document"></i></el-icon>
+                      导出为CSV
+                    </el-dropdown-item>
+                    <el-dropdown-item command="pdf">
+                      <el-icon><i class="el-icon-picture"></i></el-icon>
+                      导出为PDF
+                    </el-dropdown-item>
+                    <el-dropdown-item command="json">
+                      <el-icon><i class="el-icon-data-line"></i></el-icon>
+                      导出为JSON
+                    </el-dropdown-item>
+                  </el-dropdown-menu>
+                </template>
+              </el-dropdown>
             </div>
-            <div class="data-info" style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: #e6b422">
-              <p>数据统计时间：2026年3月，基于历史文献和考古资料整理 | 数据总量：{{ palaces.length }} 座宫殿</p>
+            <div class="data-info" style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-body, #333333)">
+              <p>数据统计时间：2026年2月，基于历史文献和考古资料整理 | 数据总量：{{ palaces.length }} 座宫殿</p>
               <p>数据来源：《中国古代建筑史》、唐宋宫殿考古发掘报告、国家文物局公开遗址数据，仅用于参赛，不用于商业用途</p>
               <p>数据局限性：本项目仅统计有明确考古记载、遗址可追溯的唐宋宫殿建筑，不含已完全损毁、无实测数据的宫殿</p>
             </div>
@@ -1254,12 +1721,30 @@ const comparisonData = computed(() => {
             </div>
           </section>
 
-          <!-- 唐宋宫殿发展历程时间轴 -->
-          <section id="timeline" class="container scroll-animate" style="margin-bottom: 3rem">
-            <h2 class="section-title">发展历程｜历史节点</h2>
-            <p class="description" style="letter-spacing: 2px">
-              唐宋两代宫殿建筑的重要历史节点和代表建筑。
-            </p>
+          <!-- 唐宋宫殿发展历程时间轴 - 增强版 -->
+          <section id="timeline" class="scroll-animate" style="margin-bottom: 3rem; width: 100%; max-width: 100%;">
+            <div class="container">
+              <h2 class="section-title">发展历程｜交互式历史时间轴</h2>
+              <p class="description" style="letter-spacing: 2px">
+                探索唐宋两代宫殿建筑的发展历程，支持播放、筛选、缩放等交互操作。
+              </p>
+            </div>
+            <div style="width: 100%; padding: 0 20px; box-sizing: border-box;">
+              <div style="height: auto; min-height: 600px; width: 100%; max-width: 1400px; margin: 0 auto;">
+                <ModuleTimelineEnhanced 
+                  :palaces="palaces"
+                  @time-select="handleTimeSelect"
+                  @period-filter="handlePeriodFilter"
+                  @play-start="handlePlayStart"
+                  @play-end="handlePlayEnd"
+                />
+              </div>
+            </div>
+          </section>
+
+          <!-- 原时间轴（保留作为备用） -->
+          <section id="timeline-classic" class="container scroll-animate" style="margin-bottom: 3rem; display: none;">
+            <h2 class="section-title">发展历程｜经典时间轴</h2>
             <div class="map-container" style="height: auto; min-height: 400px">
               <ModuleTimeline @time-period-click="handleTimePeriodClick"></ModuleTimeline>
             </div>
@@ -1267,19 +1752,36 @@ const comparisonData = computed(() => {
 
           <!-- 宫殿对比按钮 -->
           <div style="text-align: center; margin: 2rem 0">
-            <el-button type="primary" @click="() => { saveScrollPosition(); showComparisonDialog = true }" class="comparison-button">
+            <el-button type="primary" @click="() => { showComparisonDialog = true }" class="comparison-button">
               <el-icon><i class="el-icon-s-data"></i></el-icon>
               宫殿对比
             </el-button>
           </div>
 
           <!-- 页脚 -->
-          <footer class="footer container" style="text-align: center; padding: 2rem">
-            <el-divider />
-            <p>©2026 仲恺农业工程学院 | 中国大学生计算机设计大赛 | 信息可视化-数据可视化</p>
-            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #999">数据来源：《中国古代建筑史》《营造法式》、唐宋宫殿考古发掘报告、国家文物局公开遗址数据</p>
-            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: #999">仅用于中国大学生计算机设计大赛参赛，不用于商业用途</p>
-            <p style="margin-top: 1rem; font-size: 0.9rem; color: #999">作者：陈创鸿、刘晶晶</p>
+          <footer class="footer container" style="text-align: center; padding: 2rem; background: var(--card-bg, rgba(20, 25, 35, 0.95)); border-radius: 12px; margin-top: 2rem;">
+            <el-divider style="border-color: var(--border-color, rgba(196, 69, 54, 0.3));" />
+            <p style="color: var(--text-accent, #e6b422); font-weight: bold; font-size: 1rem;">©2026 仲恺农业工程学院 | 中国大学生计算机设计大赛 | 信息可视化-数据可视化</p>
+            
+            <!-- 数据来源说明 -->
+            <div style="margin-top: 1rem; text-align: left; max-width: 800px; margin-left: auto; margin-right: auto;">
+              <p style="font-size: 0.85rem; color: var(--text-secondary, #cccccc); font-weight: bold; margin-bottom: 0.5rem;">数据来源：</p>
+              <p style="font-size: 0.8rem; color: var(--text-body, #aaaaaa); line-height: 1.6; margin-bottom: 1rem;">
+                本项目数据主要来源于《中国古代建筑史》《营造法式》等权威历史文献，结合唐宋宫殿考古发掘报告、国家文物局公开的遗址数据，以及古建筑测绘资料。数据统计时间为2026年2月，涵盖公元582年至1279年间有明确考古记载、遗址可追溯的唐宋宫殿建筑。
+              </p>
+              
+              <!-- 数据局限性说明 -->
+              <p style="font-size: 0.85rem; color: var(--text-secondary, #cccccc); font-weight: bold; margin-bottom: 0.5rem;">数据局限性：</p>
+              <p style="font-size: 0.8rem; color: var(--text-body, #aaaaaa); line-height: 1.6;">
+                1. 本项目仅统计有明确考古记载、遗址可追溯的唐宋宫殿建筑，不含已完全损毁、无实测数据的宫殿。<br>
+                2. 部分宫殿的具体面积、建造年份等数据可能存在争议，本数据基于现有考古资料和历史文献记载。<br>
+                3. 由于历史变迁，部分宫殿的准确位置可能难以确定，坐标数据仅供参考。<br>
+                4. 本数据仅用于中国大学生计算机设计大赛参赛展示，不用于商业用途。
+              </p>
+            </div>
+            
+            <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-body, #ccc);">仅用于中国大学生计算机设计大赛参赛，不用于商业用途</p>
+            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-accent, #e6b422);">作者：陈创鸿、刘晶晶</p>
           </footer>
         </el-main>
       </el-container>
@@ -1435,7 +1937,7 @@ const comparisonData = computed(() => {
         v-model="showComparisonDialog"
         title="宫殿对比分析"
         width="90%"
-        :before-close="() => { showComparisonDialog = false; restoreScrollPosition() }"
+        :before-close="() => { showComparisonDialog = false }"
         custom-class="palace-comparison-dialog"
       >
         <div class="palace-comparison">
@@ -1502,21 +2004,34 @@ const comparisonData = computed(() => {
       <el-dialog
         v-model="showHistoryDialog"
         title="历史浏览记录"
-        width="60%"
+        width="80%"
         :before-close="() => { showHistoryDialog = false; restoreScrollPosition() }"
         custom-class="history-dialog"
       >
         <div class="history-dialog-content">
-          <div v-if="historyRecords.length > 0">
-            <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem">
-              <span style="color: var(--text-accent); font-size: 1.1rem; font-weight: bold">最近浏览的宫殿</span>
-              <el-button type="text" @click="clearHistoryRecords" style="color: var(--text-accent); padding: 0">
+          <!-- 历史记录筛选和操作 -->
+          <div class="history-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem">
+            <span style="color: var(--text-accent); font-size: 1.1rem; font-weight: bold">最近浏览的宫殿</span>
+            <div style="display: flex; align-items: center; gap: 1rem">
+              <el-select v-model="historyDynastyFilter" placeholder="按朝代筛选" clearable style="width: 120px">
+                <el-option label="全部" value="" />
+                <el-option label="唐代" value="唐代" />
+                <el-option label="宋代" value="宋代" />
+              </el-select>
+              <el-button type="info" @click="goToLastViewedPalace" size="small">
+                <el-icon><i class="el-icon-arrow-left"></i></el-icon>
+                回到上次查看
+              </el-button>
+              <el-button type="danger" @click="clearHistoryRecords" size="small">
                 清空记录
               </el-button>
             </div>
+          </div>
+          
+          <div v-if="filteredHistoryRecords.length > 0">
             <div class="history-list" style="max-height: 400px; overflow-y: auto">
               <el-card 
-                v-for="record in historyRecords" 
+                v-for="record in filteredHistoryRecords" 
                 :key="record.id"
                 @click="openHistoryPalace(record.id)"
                 class="history-card"
@@ -1526,6 +2041,7 @@ const comparisonData = computed(() => {
                   <h4 style="color: var(--text-accent); margin: 0 0 0.25rem 0">{{ record.name }}</h4>
                   <p style="margin: 0; font-size: 0.9rem; color: var(--text-body)">{{ record.dynasty }} · {{ record.location }}</p>
                   <p style="margin: 0; font-size: 0.8rem; color: var(--text-secondary)">{{ record.area }}</p>
+                  <p style="margin: 0.25rem 0 0 0; font-size: 0.7rem; color: var(--text-secondary)">{{ formatTimestamp(record.timestamp) }}</p>
                 </div>
               </el-card>
             </div>
@@ -1588,16 +2104,55 @@ const comparisonData = computed(() => {
   left: 0;
   right: 0;
   bottom: 0;
-  background: rgba(28, 12, 35, 0.95);
+  background: linear-gradient(135deg, #f8f5f0 0%, #f0e6d2 100%);
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 9999;
+  transition: opacity 0.5s ease-in-out;
+}
+
+.loading-container.exiting {
+  opacity: 0;
+}
+
+.loading-container.dark {
+  background: linear-gradient(135deg, #121212 0%, #1e162d 100%);
+}
+
+.particles-container {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 1;
 }
 
 .loading-spinner {
   text-align: center;
   position: relative;
+  z-index: 2;
+}
+
+/* 主容器样式 */
+.app-container {
+  background: var(--bg-gradient);
+  min-height: 100vh;
+  position: relative;
+}
+
+/* 主内容淡入动画 */
+.main-content {
+  opacity: 0;
+  transition: opacity 0.5s ease-in-out;
+  background: var(--bg-gradient);
+  min-height: 100vh;
+  position: relative;
+}
+
+.main-content.fade-in {
+  opacity: 1;
 }
 
 /* 卷轴展开动画 */
@@ -1606,6 +2161,19 @@ const comparisonData = computed(() => {
   height: 120px;
   position: relative;
   margin: 0 auto 30px;
+  animation: spin 3s ease-in-out infinite;
+}
+
+@keyframes spin {
+  0% {
+    transform: rotateY(0deg);
+  }
+  50% {
+    transform: rotateY(180deg);
+  }
+  100% {
+    transform: rotateY(360deg);
+  }
 }
 
 .spinner::before,
@@ -1615,9 +2183,17 @@ const comparisonData = computed(() => {
   top: 0;
   bottom: 0;
   width: 40px;
-  background: linear-gradient(to right, #8b3429, #c44536);
+  background: linear-gradient(to right, #c44536, #8b3429);
   border-radius: 10px;
   animation: scroll 2s ease-in-out infinite;
+  box-shadow: 0 0 15px rgba(196, 69, 54, 0.5);
+  transition: background 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
+}
+
+.loading-container.dark .spinner::before,
+.loading-container.dark .spinner::after {
+  background: linear-gradient(to right, #8b3429, #c44536);
+  box-shadow: 0 0 15px rgba(230, 180, 34, 0.5);
 }
 
 .spinner::before {
@@ -1636,10 +2212,17 @@ const comparisonData = computed(() => {
   left: 50px;
   right: 50px;
   bottom: 10px;
-  background: linear-gradient(to bottom, #e6b422, #f0d98c);
+  background: linear-gradient(to bottom, #f0d98c, #e6b422);
   border-radius: 5px;
   animation: reveal 2s ease-in-out infinite;
   opacity: 0;
+  box-shadow: 0 0 20px rgba(196, 69, 54, 0.5);
+  transition: background 0.5s ease-in-out, box-shadow 0.5s ease-in-out;
+}
+
+.loading-container.dark .scroll-content {
+  background: linear-gradient(to bottom, #e6b422, #f0d98c);
+  box-shadow: 0 0 20px rgba(230, 180, 34, 0.5);
 }
 
 @keyframes scroll {
@@ -1666,12 +2249,92 @@ const comparisonData = computed(() => {
   }
 }
 
+.loading-title {
+  color: #c44536;
+  font-size: 3rem;
+  font-family: 'Noto Serif SC', serif;
+  margin: 0 0 10px 0;
+  text-shadow: 0 0 30px rgba(196, 69, 54, 0.8);
+  animation: titleAnimation 2s ease-in-out infinite;
+  transition: color 0.5s ease-in-out, text-shadow 0.5s ease-in-out;
+}
+
+.loading-title.dark {
+  color: #e6b422;
+  text-shadow: 0 0 30px rgba(230, 180, 34, 0.8);
+}
+
+@keyframes titleAnimation {
+  0%, 100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.05);
+    opacity: 0.8;
+  }
+}
+
+/* Logo放大缩小消失动画 */
+.loading-spinner {
+  text-align: center;
+  position: relative;
+  z-index: 2;
+}
+
+.loading-spinner.exiting {
+  animation: logoExit 0.5s ease-in-out forwards;
+}
+
+@keyframes logoExit {
+  0% {
+    transform: scale(1);
+    opacity: 1;
+  }
+  50% {
+    transform: scale(1.2);
+    opacity: 0.8;
+  }
+  100% {
+    transform: scale(0.8);
+    opacity: 0;
+  }
+}
+
+.loading-subtitle {
+  color: #2c3e50;
+  font-size: 1.2rem;
+  font-family: 'Noto Serif SC', serif;
+  margin: 0 0 20px 0;
+  opacity: 0.9;
+  animation: fadeIn 3s ease-in-out infinite;
+  transition: color 0.5s ease-in-out;
+}
+
+.loading-subtitle.dark {
+  color: #ffffff;
+}
+
+@keyframes fadeIn {
+  0%, 100% {
+    opacity: 0.6;
+  }
+  50% {
+    opacity: 1;
+  }
+}
+
 .loading-text {
-  color: #f5c5b6;
+  color: #5a6c7d;
   font-family: 'Noto Serif SC', serif;
   font-size: 1.2rem;
   margin: 0;
   animation: fadeInOut 2s ease-in-out infinite;
+  transition: color 0.5s ease-in-out;
+}
+
+.loading-text.dark {
+  color: #f5c5b6;
 }
 
 @keyframes fadeInOut {
@@ -1680,6 +2343,65 @@ const comparisonData = computed(() => {
   }
   50% {
     opacity: 1;
+  }
+}
+
+/* 进度条样式 */
+.progress-container {
+  width: 300px;
+  height: 6px;
+  background: rgba(0, 0, 0, 0.1);
+  border-radius: 3px;
+  margin: 20px auto 10px;
+  overflow: hidden;
+  position: relative;
+}
+
+.progress-container.dark {
+  background: rgba(255, 255, 255, 0.2);
+}
+
+.progress-bar {
+  height: 100%;
+  background: linear-gradient(90deg, #c44536, #8b3429);
+  border-radius: 3px;
+  transition: width 0.3s ease-out;
+  box-shadow: 0 0 10px rgba(196, 69, 54, 0.5);
+}
+
+.loading-container.dark .progress-bar {
+  background: linear-gradient(90deg, #e6b422, #f0d98c);
+  box-shadow: 0 0 10px rgba(230, 180, 34, 0.5);
+}
+
+/* 加载百分比样式 */
+.loading-percentage {
+  color: #c44536;
+  font-family: 'Noto Serif SC', serif;
+  font-size: 1rem;
+  margin: 5px 0 0 0;
+  font-weight: 600;
+  transition: color 0.5s ease-in-out;
+}
+
+.loading-percentage.dark {
+  color: #e6b422;
+}
+
+.particle {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  z-index: 1;
+  animation: particleFloat 6s ease-in-out infinite;
+}
+
+@keyframes particleFloat {
+  0%, 100% {
+    transform: translateY(0) scale(1);
+  }
+  50% {
+    transform: translateY(-20px) scale(1.1);
   }
 }
 
@@ -1802,10 +2524,103 @@ const comparisonData = computed(() => {
   border-radius: 2px;
 }
 
+/* 顶部控制按钮样式 */
+.top-controls {
+  position: fixed;
+  top: 20px;
+  right: 20px;
+  z-index: 1000;
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+}
+
+/* 历史记录弹窗样式 */
+.history-dialog {
+  z-index: 2000;
+}
+
+.history-dialog-content {
+  padding: 1rem;
+}
+
+.history-header {
+  flex-wrap: wrap;
+  gap: 1rem;
+}
+
+.history-list {
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.history-card {
+  transition: all 0.3s ease;
+}
+
+.history-card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(196, 69, 54, 0.2);
+}
+
 /* 响应式设计 */
 @media (max-width: 768px) {
   .section-title {
     font-size: 1.2rem;
+  }
+  
+  #intro {
+    padding-top: 6rem;
+  }
+  
+  .project-intro {
+    padding-top: 6rem;
+  }
+  
+  .top-controls {
+    top: 60px;
+    right: 10px;
+    gap: 0.5rem;
+    flex-direction: column;
+    align-items: flex-end;
+  }
+  
+  .top-controls .el-button {
+    font-size: 12px;
+    padding: 6px 12px;
+  }
+  
+  .top-controls .el-switch {
+    font-size: 12px;
+  }
+  
+  /* 历史记录弹窗移动端适配 */
+  .history-dialog {
+    width: 95% !important;
+    margin: 10% auto !important;
+  }
+  
+  .history-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .history-header > div {
+    width: 100%;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.5rem;
+  }
+  
+  .history-header .el-select {
+    width: 100%;
+  }
+  
+  .history-list {
+    max-height: 300px;
   }
 }
 
@@ -2296,10 +3111,10 @@ const comparisonData = computed(() => {
   width: 48px;
   max-height: 80vh;
   max-height: 600px;
-  background: rgba(28, 12, 35, 0.85);
+  background: rgba(245, 243, 237, 0.85);
   backdrop-filter: blur(10px);
   border-radius: 24px;
-  border: 1px solid rgba(245, 197, 182, 0.3);
+  border: 1px solid rgba(196, 69, 54, 0.3);
   box-shadow: 0 10px 30px -10px rgba(196, 69, 54, 0.3);
   transition: all 0.3s ease;
   display: flex;
@@ -2308,10 +3123,20 @@ const comparisonData = computed(() => {
   padding: 16px 0;
 }
 
+.dark .nav-rail {
+  background: rgba(28, 12, 35, 0.85);
+  border: 1px solid rgba(245, 197, 182, 0.3);
+  box-shadow: 0 10px 30px -10px rgba(196, 69, 54, 0.3);
+}
+
 .nav-rail-content {
   flex: 1;
   overflow-y: auto;
   scrollbar-width: thin;
+  scrollbar-color: rgba(196, 69, 54, 0.3) rgba(245, 243, 237, 0.85);
+}
+
+.dark .nav-rail-content {
   scrollbar-color: rgba(245, 197, 182, 0.3) rgba(28, 12, 35, 0.85);
 }
 
@@ -2320,16 +3145,28 @@ const comparisonData = computed(() => {
 }
 
 .nav-rail-content::-webkit-scrollbar-track {
-  background: rgba(28, 12, 35, 0.85);
+  background: rgba(245, 243, 237, 0.85);
   border-radius: 2px;
+}
+
+.dark .nav-rail-content::-webkit-scrollbar-track {
+  background: rgba(28, 12, 35, 0.85);
 }
 
 .nav-rail-content::-webkit-scrollbar-thumb {
-  background: rgba(245, 197, 182, 0.3);
+  background: rgba(196, 69, 54, 0.3);
   border-radius: 2px;
 }
 
+.dark .nav-rail-content::-webkit-scrollbar-thumb {
+  background: rgba(245, 197, 182, 0.3);
+}
+
 .nav-rail-content::-webkit-scrollbar-thumb:hover {
+  background: rgba(196, 69, 54, 0.5);
+}
+
+.dark .nav-rail-content::-webkit-scrollbar-thumb:hover {
   background: rgba(245, 197, 182, 0.5);
 }
 
@@ -2369,10 +3206,14 @@ const comparisonData = computed(() => {
   height: 24px;
   border-radius: 50%;
   margin-left: 12px;
-  background: #ccc;
+  background: #999;
   transition: all 0.3s ease;
   position: relative;
   z-index: 1;
+}
+
+.dark .nav-rail-dot {
+  background: #ccc;
 }
 
 .nav-rail-item:hover .nav-rail-dot {
@@ -2380,29 +3221,42 @@ const comparisonData = computed(() => {
 }
 
 .nav-rail-item.active .nav-rail-dot {
+  background: linear-gradient(135deg, #c44536, #8b3429);
+  box-shadow: 0 0 12px rgba(196, 69, 54, 0.6);
+  transform: scale(1.2);
+}
+
+.dark .nav-rail-item.active .nav-rail-dot {
   background: linear-gradient(135deg, #ff9f98, #f5c5b6);
   box-shadow: 0 0 12px rgba(245, 197, 182, 0.6);
-  transform: scale(1.2);
 }
 
 .nav-rail-icon {
   margin-left: 12px;
   font-size: 16px;
-  color: #ccc;
+  color: #666;
   transition: all 0.3s ease;
   opacity: 0;
   transform: translateX(10px);
   transition: all 0.3s ease 0.1s;
 }
 
+.dark .nav-rail-icon {
+  color: #ccc;
+}
+
 .nav-rail-item.active .nav-rail-icon {
+  color: #c44536;
+}
+
+.dark .nav-rail-item.active .nav-rail-icon {
   color: #f5c5b6;
 }
 
 .nav-rail-label {
   margin-left: 8px;
   font-size: 14px;
-  color: #ccc;
+  color: #666;
   font-family: 'Noto Serif SC', serif;
   opacity: 0;
   transform: translateX(10px);
@@ -2410,7 +3264,15 @@ const comparisonData = computed(() => {
   white-space: nowrap;
 }
 
+.dark .nav-rail-label {
+  color: #ccc;
+}
+
 .nav-rail-item.active .nav-rail-label {
+  color: #c44536;
+}
+
+.dark .nav-rail-item.active .nav-rail-label {
   color: #f5c5b6;
 }
 
@@ -2430,14 +3292,26 @@ const comparisonData = computed(() => {
 }
 
 .nav-control-button {
-  background: rgba(28, 12, 35, 0.85);
+  background: rgba(245, 243, 237, 0.85);
   backdrop-filter: blur(10px);
-  border: 1px solid rgba(245, 197, 182, 0.3);
-  color: #f5c5b6;
+  border: 1px solid rgba(196, 69, 54, 0.3);
+  color: #c44536;
   transition: all 0.3s ease;
 }
 
+.dark .nav-control-button {
+  background: rgba(28, 12, 35, 0.85);
+  border: 1px solid rgba(245, 197, 182, 0.3);
+  color: #f5c5b6;
+}
+
 .nav-control-button:hover {
+  background: rgba(245, 243, 237, 0.95);
+  border-color: #c44536;
+  transform: scale(1.1);
+}
+
+.dark .nav-control-button:hover {
   background: rgba(28, 12, 35, 0.95);
   border-color: #f5c5b6;
   transform: scale(1.1);
@@ -2568,6 +3442,39 @@ button:focus,
 
 .mobile-nav-item.active .mobile-nav-text {
   color: #f5c5b6;
+}
+
+/* 移动端回到顶部按钮样式 */
+.back-to-top-item {
+  margin-top: 1rem;
+  border-top: 1px solid rgba(245, 197, 182, 0.2);
+  padding-top: 1.5rem;
+}
+
+.dark .back-to-top-item {
+  border-top: 1px solid rgba(245, 197, 182, 0.2);
+}
+
+.back-to-top-item:hover {
+  background: rgba(245, 197, 182, 0.1);
+}
+
+.back-to-top-item .mobile-nav-icon {
+  color: #c44536;
+}
+
+.dark .back-to-top-item .mobile-nav-icon {
+  color: #f5c5b6;
+}
+
+.back-to-top-item .mobile-nav-text {
+  color: #c44536;
+  font-weight: 500;
+}
+
+.dark .back-to-top-item .mobile-nav-text {
+  color: #f5c5b6;
+  font-weight: 500;
 }
 
 /* 响应式样式 */

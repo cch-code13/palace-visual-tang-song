@@ -10,22 +10,28 @@
   --text-secondary: #666666; /* 二级标题文字 */
   --text-body: #555555; /* 正文文字：中灰色 */
   --text-muted: #999999; /* 辅助文字 */
-  --text-accent: #c44536; /* 强调文字（红色） */
+  --text-accent: #2c3e50; /* 强调文字（深蓝色） */
   --text-accent-alt: #e6b422; /* 强调文字（金色） */
-  --border-color: rgba(196, 69, 54, 0.2);
-  --theme-shadow: 0 10px 30px -10px rgba(196, 69, 54, 0.2);
+  --border-color: rgba(44, 62, 80, 0.2);
+  --theme-shadow: 0 10px 30px -10px rgba(44, 62, 80, 0.2);
   --hero-gradient: linear-gradient(135deg, #f8f5f0 0%, #f0e6d2 100%);
   --chart-grid-color: rgba(0, 0, 0, 0.1); /* 图表网格线颜色 */
   --chart-stroke-color: #333333; /* 图表描边颜色 */
   --tooltip-bg: rgba(255, 250, 240, 0.9); /*  tooltip背景颜色 */
   --tooltip-text: #333333; /*  tooltip文字颜色 */
-  --tooltip-border: #c44536; /*  tooltip边框颜色 */
+  --tooltip-border: #2c3e50; /*  tooltip边框颜色 */
   --filter-bg: #ffffff; /* 筛选框背景颜色 */
   --filter-text: #333333; /* 筛选框文字颜色 */
   --bg-animation-speed: 20s;
   --animation-delay-1: 0s;
   --animation-delay-2: 2s;
   --animation-delay-3: 4s;
+  /* 古典文化元素 */
+  --paper-texture: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="linear" slope="0.05"/><feFuncG type="linear" slope="0.05"/><feFuncB type="linear" slope="0.03"/></feComponentTransfer></filter></defs><rect width="100" height="100" fill="%23f8f5f0" filter="url(%23noise)"/></svg>');
+  --cloud-pattern: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><path d="M30,50 Q40,30 60,35 Q80,30 100,45 Q120,30 140,40 Q160,25 180,45 Q190,60 180,70 Q160,80 140,75 Q120,85 100,70 Q80,85 60,75 Q40,80 30,70 Q20,60 30,50 Z" fill="rgba(230, 180, 34, 0.1)"/><path d="M50,60 Q60,40 80,45 Q100,40 120,55 Q140,40 160,50 Q180,35 200,55 Q210,70 200,80 Q180,90 160,85 Q140,95 120,80 Q100,95 80,85 Q60,90 50,80 Q40,70 50,60 Z" fill="rgba(196, 69, 54, 0.1)"/></svg>');
+  --border-pattern: linear-gradient(45deg, #c44536, #e6b422, #c44536, #e6b422);
+  --glow-effect: 0 0 15px rgba(230, 180, 34, 0.6);
+  --scroll-speed: 20s;
 }
 
 /* 深色主题 */
@@ -37,17 +43,68 @@
   --text-body: #aaaaaa; /* 正文文字：浅灰色 */
   --text-muted: #888888; /* 辅助文字 */
   --text-accent: #e6b422; /* 强调文字（金色） */
-  --text-accent-alt: #c44536; /* 强调文字（红色） */
-  --border-color: rgba(196, 69, 54, 0.3);
+  --text-accent-alt: #2c3e50; /* 强调文字（深蓝色） */
+  --border-color: rgba(44, 62, 80, 0.3);
   --theme-shadow: 0 10px 30px -10px rgba(45, 27, 105, 0.3);
   --hero-gradient: linear-gradient(135deg, #121212 0%, #1e162d 100%);
   --chart-grid-color: rgba(255, 255, 255, 0.1); /* 图表网格线颜色 */
   --chart-stroke-color: #ffffff; /* 图表描边颜色 */
   --tooltip-bg: rgba(30, 20, 48, 0.9); /*  tooltip背景颜色 */
   --tooltip-text: #ffffff; /*  tooltip文字颜色 */
-  --tooltip-border: #e6b422; /*  tooltip边框颜色 */
+  --tooltip-border: #2c3e50; /*  tooltip边框颜色 */
   --filter-bg: #2a2040; /* 筛选框背景颜色 */
   --filter-text: #cccccc; /* 筛选框文字颜色 */
+  --paper-texture: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="linear" slope="0.03"/><feFuncG type="linear" slope="0.03"/><feFuncB type="linear" slope="0.05"/></feComponentTransfer></filter></defs><rect width="100" height="100" fill="%23121212" filter="url(%23noise)"/></svg>');
+  --cloud-pattern: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><path d="M30,50 Q40,30 60,35 Q80,30 100,45 Q120,30 140,40 Q160,25 180,45 Q190,60 180,70 Q160,80 140,75 Q120,85 100,70 Q80,85 60,75 Q40,80 30,70 Q20,60 30,50 Z" fill="rgba(230, 180, 34, 0.05)"/><path d="M50,60 Q60,40 80,45 Q100,40 120,55 Q140,40 160,50 Q180,35 200,55 Q210,70 200,80 Q180,90 160,85 Q140,95 120,80 Q100,95 80,85 Q60,90 50,80 Q40,70 50,60 Z" fill="rgba(196, 69, 54, 0.05)"/></svg>');
+}
+
+/* 古风典雅模式 */
+.elegant {
+  --bg-gradient: linear-gradient(135deg, #f0e6d2 0%, #e6d2b8 100%);
+  --card-bg: rgba(255, 248, 235, 0.95);
+  --text-primary: #8b4513; /* 棕色 */
+  --text-secondary: #a0522d; /* 深棕色 */
+  --text-body: #6b4423; /* 中棕色 */
+  --text-muted: #8b7355; /* 浅棕色 */
+  --text-accent: #b8860b; /* 金色 */
+  --text-accent-alt: #8b4513; /* 棕色 */
+  --border-color: rgba(184, 134, 11, 0.3);
+  --theme-shadow: 0 10px 30px -10px rgba(184, 134, 11, 0.2);
+  --hero-gradient: linear-gradient(135deg, #f0e6d2 0%, #e6d2b8 100%);
+  --chart-grid-color: rgba(139, 69, 19, 0.1);
+  --chart-stroke-color: #8b4513;
+  --tooltip-bg: rgba(255, 248, 235, 0.95);
+  --tooltip-text: #6b4423;
+  --tooltip-border: #b8860b;
+  --filter-bg: #fffaf0;
+  --filter-text: #6b4423;
+  --paper-texture: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0.2"/><feComponentTransfer><feFuncR type="linear" slope="0.08"/><feFuncG type="linear" slope="0.05"/><feFuncB type="linear" slope="0.03"/></feComponentTransfer></filter></defs><rect width="100" height="100" fill="%23f0e6d2" filter="url(%23noise)"/></svg>');
+  --cloud-pattern: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><path d="M30,50 Q40,30 60,35 Q80,30 100,45 Q120,30 140,40 Q160,25 180,45 Q190,60 180,70 Q160,80 140,75 Q120,85 100,70 Q80,85 60,75 Q40,80 30,70 Q20,60 30,50 Z" fill="rgba(184, 134, 11, 0.1)"/><path d="M50,60 Q60,40 80,45 Q100,40 120,55 Q140,40 160,50 Q180,35 200,55 Q210,70 200,80 Q180,90 160,85 Q140,95 120,80 Q100,95 80,85 Q60,90 50,80 Q40,70 50,60 Z" fill="rgba(139, 69, 19, 0.1)"/></svg>');
+}
+
+/* 夜间护眼模式 */
+.eye-care {
+  --bg-gradient: linear-gradient(135deg, #1a2a3a 0%, #2a3a4a 100%);
+  --card-bg: rgba(40, 50, 60, 0.9);
+  --text-primary: #e6e6e6; /* 浅灰色 */
+  --text-secondary: #cccccc; /* 中灰色 */
+  --text-body: #b3b3b3; /* 深灰色 */
+  --text-muted: #999999; /* 更暗灰色 */
+  --text-accent: #4a90e2; /* 蓝色 */
+  --text-accent-alt: #50e3c2; /* 青色 */
+  --border-color: rgba(74, 144, 226, 0.3);
+  --theme-shadow: 0 10px 30px -10px rgba(74, 144, 226, 0.2);
+  --hero-gradient: linear-gradient(135deg, #1a2a3a 0%, #2a3a4a 100%);
+  --chart-grid-color: rgba(255, 255, 255, 0.05);
+  --chart-stroke-color: #e6e6e6;
+  --tooltip-bg: rgba(40, 50, 60, 0.95);
+  --tooltip-text: #e6e6e6;
+  --tooltip-border: #4a90e2;
+  --filter-bg: #2a3a4a;
+  --filter-text: #e6e6e6;
+  --paper-texture: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><defs><filter id="noise"><feTurbulence type="fractalNoise" baseFrequency="0.9" numOctaves="4" stitchTiles="stitch"/><feColorMatrix type="saturate" values="0"/><feComponentTransfer><feFuncR type="linear" slope="0.02"/><feFuncG type="linear" slope="0.03"/><feFuncB type="linear" slope="0.04"/></feComponentTransfer></filter></defs><rect width="100" height="100" fill="%231a2a3a" filter="url(%23noise)"/></svg>');
+  --cloud-pattern: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="200" height="100" viewBox="0 0 200 100"><path d="M30,50 Q40,30 60,35 Q80,30 100,45 Q120,30 140,40 Q160,25 180,45 Q190,60 180,70 Q160,80 140,75 Q120,85 100,70 Q80,85 60,75 Q40,80 30,70 Q20,60 30,50 Z" fill="rgba(74, 144, 226, 0.05)"/><path d="M50,60 Q60,40 80,45 Q100,40 120,55 Q140,40 160,50 Q180,35 200,55 Q210,70 200,80 Q180,90 160,85 Q140,95 120,80 Q100,95 80,85 Q60,90 50,80 Q40,70 50,60 Z" fill="rgba(80, 227, 194, 0.05)"/></svg>');
+  --glow-effect: 0 0 15px rgba(74, 144, 226, 0.6);
 }
 
 /* 全局重置 */
@@ -59,6 +116,7 @@
 
 body {
   background: var(--bg-gradient);
+  background-image: var(--paper-texture), var(--bg-gradient);
   color: var(--text-body);
   font-family: 'Inter', 'Noto Sans SC', sans-serif;
   line-height: 1.6;
@@ -467,6 +525,10 @@ h3 {
   /* 为阴影提供定位上下文 */
   transform-style: preserve-3d;
   transform: perspective(1000px) rotateX(0deg) rotateY(0deg);
+  background-image: var(--cloud-pattern);
+  background-size: 200px 100px;
+  background-repeat: repeat;
+  background-position: center;
 }
 
 /* 卡片3D效果 */
@@ -482,11 +544,47 @@ h3 {
   z-index: -1;
 }
 
+/* 复古边框效果 */
+.custom-card::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  left: -2px;
+  right: -2px;
+  bottom: -2px;
+  border-radius: 26px;
+  background: var(--border-pattern);
+  background-size: 200% 200%;
+  animation: borderFlow 3s linear infinite;
+  z-index: -2;
+  opacity: 0.5;
+}
+
+@keyframes borderFlow {
+  0% {
+    background-position: 0% 0%;
+  }
+  100% {
+    background-position: 100% 100%;
+  }
+}
+
 .custom-card:hover {
   transform: perspective(1000px) rotateX(2deg) rotateY(2deg) translateY(-5px);
   /* 悬浮时增强阴影效果 */
-  box-shadow: 0 20px 40px -10px rgba(196, 69, 54, 0.4), 0 0 30px rgba(196, 69, 54, 0.3);
+  box-shadow: 0 20px 40px -10px rgba(196, 69, 54, 0.4), 0 0 30px rgba(196, 69, 54, 0.3), var(--glow-effect);
   border-color: rgba(196, 69, 54, 0.6);
+  /* 悬浮时增强光效 */
+  animation: cardGlow 1.5s ease-in-out infinite alternate;
+}
+
+@keyframes cardGlow {
+  from {
+    box-shadow: 0 20px 40px -10px rgba(196, 69, 54, 0.4), 0 0 30px rgba(196, 69, 54, 0.3), var(--glow-effect);
+  }
+  to {
+    box-shadow: 0 20px 40px -10px rgba(230, 180, 34, 0.4), 0 0 40px rgba(230, 180, 34, 0.3), 0 0 25px rgba(230, 180, 34, 0.8);
+  }
 }
 
 /* 统计项容器 - 解决内容对齐和溢出 */
@@ -519,11 +617,30 @@ h3 {
   color: transparent;
   display: inline-block;
   /* 统一发光效果，避免局部过强/过弱 */
-  text-shadow: 0 0 15px rgba(230, 180, 34, 0.6);
+  text-shadow: 
+    0 0 15px rgba(230, 180, 34, 0.8),
+    0 0 30px rgba(230, 180, 34, 0.5),
+    0 0 60px rgba(230, 180, 34, 0.3);
   /* 确保渐变覆盖整个文字区域 */
   width: fit-content;
   margin: 0;
   /* 清除默认边距 */
+  animation: numberGlow 2s ease-in-out infinite alternate;
+}
+
+@keyframes numberGlow {
+  from {
+    text-shadow: 
+      0 0 15px rgba(230, 180, 34, 0.8),
+      0 0 30px rgba(230, 180, 34, 0.5),
+      0 0 60px rgba(230, 180, 34, 0.3);
+  }
+  to {
+    text-shadow: 
+      0 0 25px rgba(196, 69, 54, 0.8),
+      0 0 40px rgba(196, 69, 54, 0.5),
+      0 0 80px rgba(196, 69, 54, 0.3);
+  }
 }
 
 /* 统计标签样式 - 优化对齐和颜色 */
@@ -1067,7 +1184,7 @@ h3 {
 }
 
 .el-dialog__footer {
-  border-top: 1px solid #e6b422 !important;
+  border-top: 1px solid var(--text-accent, #e6b422) !important;
   padding: 1rem 1.5rem !important;
   background: var(--card-bg) !important;
 }

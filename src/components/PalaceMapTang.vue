@@ -180,10 +180,11 @@ const initChart = () => {
         type: "effectScatter",
         // 设置涟漪效果的配置
         rippleEffect: {
-          number: 2,
-          scale: 2.5,
-          brushType: 'stroke',
-          color: '#e6b422' // 金色涟漪
+          number: 3,
+          scale: 3,
+          brushType: 'fill',
+          color: '#e6b422', // 金色涟漪
+          period: 3 // 涟漪动画周期
         },
         label: {
           show: true,
@@ -196,10 +197,17 @@ const initChart = () => {
             return params.name
           },
           position: 'right',
-          offset: [10, 0]
+          offset: [10, 0],
+          animation: true,
+          animationDuration: 1000,
+          animationEasing: 'cubicOut'
         },
         itemStyle: {
-          color: '#c44536' // 深红色点
+          color: '#c44536', // 深红色点
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(230, 180, 34, 0.8)',
+          opacity: 0.8
         },
         data: seriesData,
         coordinateSystem: "geo",
@@ -207,15 +215,44 @@ const initChart = () => {
           return Math.max(15, val[2] * 2) // 根据宫殿数量动态调整大小
         },
         animation: true,
-        animationDuration: 1000,
+        animationDuration: 2000,
         animationEasing: 'cubicOut',
+        animationDelay: function (idx) {
+          return idx * 100 // 每个点的动画延迟，创造依次出现的效果
+        },
         emphasis: {
           itemStyle: {
-            shadowBlur: 10,
+            shadowBlur: 20,
             shadowOffsetX: 0,
-            shadowColor: 'rgba(230, 180, 34, 0.5)'
+            shadowColor: 'rgba(230, 180, 34, 0.8)',
+            scale: 1.2
+          },
+          rippleEffect: {
+            scale: 4,
+            period: 2
           }
         }
+      },
+      // 添加呼吸灯效果的散点图
+      {
+        type: "scatter",
+        coordinateSystem: "geo",
+        data: seriesData,
+        symbolSize: function(val) {
+          return Math.max(15, val[2] * 2) // 根据宫殿数量动态调整大小
+        },
+        itemStyle: {
+          color: '#e6b422', // 金色点
+          opacity: 0.6
+        },
+        animation: true,
+        animationDuration: 3000,
+        animationEasing: 'easeInOutCubic',
+        animationDelay: function (idx) {
+          return idx * 150 // 每个点的动画延迟
+        },
+        animationDurationUpdate: 3000,
+        animationEasingUpdate: 'easeInOutCubic'
       }
     ]
   }
