@@ -2013,7 +2013,7 @@ const comparisonData = computed(() => {
           <!-- 页脚 -->
           <footer class="footer container" style="text-align: center; padding: 2rem; background: var(--card-bg, rgba(20, 25, 35, 0.95)); border-radius: 12px; margin-top: 2rem;">
             <el-divider style="border-color: var(--border-color, rgba(196, 69, 54, 0.3));" />
-            <p style="color: var(--text-accent, #e6b422); font-weight: bold; font-size: 1rem;">©2026 仲恺农业工程学院 | 中国大学生计算机设计大赛 | 信息可视化-数据可视化</p>
+            <p style="color: var(--text-accent, #e6b422); font-weight: bold; font-size: 1rem;">©2026 中国大学生计算机设计大赛 | 信息可视化-数据可视化</p>
             
             <!-- 数据来源说明 -->
             <div style="margin-top: 1rem; text-align: left; max-width: 800px; margin-left: auto; margin-right: auto;">
@@ -2033,7 +2033,7 @@ const comparisonData = computed(() => {
             </div>
             
             <p style="margin-top: 1rem; font-size: 0.9rem; color: var(--text-body, #ccc);">仅用于中国大学生计算机设计大赛参赛，不用于商业用途</p>
-            <p style="margin-top: 0.5rem; font-size: 0.9rem; color: var(--text-accent, #e6b422);">作者：陈创鸿、刘晶晶</p>
+
           </footer>
         </el-main>
       </el-container>
