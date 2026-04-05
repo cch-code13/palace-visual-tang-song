@@ -66,7 +66,11 @@ const initChart = () => {
   if (chartRef.value) {
     // 如果图表已存在，先销毁旧实例
     if (chart) {
-      chart.dispose();
+      try {
+        chart.dispose();
+      } catch (e) {
+        // 忽略已被销毁的实例
+      }
       chart = null;
     }
     
@@ -337,7 +341,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (chart) {
-    chart.dispose();
+    try {
+      chart.dispose();
+    } catch (e) {
+      // 忽略已被销毁的实例
+    }
   }
   window.removeEventListener('resize', handleResize);
   if (zoomLevelElement) {

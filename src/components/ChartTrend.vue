@@ -64,8 +64,12 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (myChart) {
-    myChart.dispose();
-  }
+      try {
+        myChart.dispose();
+      } catch (e) {
+        // 忽略已被销毁的实例
+      }
+    }
   
   // 清理主题变化监听器
   if (window.themeObserverTrend) {
@@ -78,10 +82,14 @@ const initChart = () => {
   if (!chart.value) return;
   
   // 如果图表已存在，先销毁旧实例
-  if (myChart) {
-    myChart.dispose();
-    myChart = null;
-  }
+    if (myChart) {
+      try {
+        myChart.dispose();
+      } catch (e) {
+        // 忽略已被销毁的实例
+      }
+      myChart = null;
+    }
   
   myChart = echarts.init(chart.value);
   

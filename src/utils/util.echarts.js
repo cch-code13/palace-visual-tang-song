@@ -22,7 +22,11 @@ export const getChartInstance = (dom, key) => {
 export const destroyChartInstance = (key) => {
   if (chartInstances.has(key)) {
     const instance = chartInstances.get(key);
-    instance.dispose();
+    try {
+      instance.dispose();
+    } catch (e) {
+      // 忽略已被销毁的实例
+    }
     chartInstances.delete(key);
   }
 };

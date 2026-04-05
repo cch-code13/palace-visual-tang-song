@@ -18,7 +18,12 @@ export function useChart(selector, optionFn, data = {}) {
     if (chartRef.value) {
       // 销毁现有实例
       if (chartInstance) {
-        chartInstance.dispose()
+        try {
+          chartInstance.dispose()
+        } catch (e) {
+          // 忽略已被销毁的实例
+        }
+        chartInstance = null
       }
       
       // 创建新实例
@@ -29,8 +34,13 @@ export function useChart(selector, optionFn, data = {}) {
       chartInstance.setOption(option)
       
       // 监听窗口大小变化
+      if (resizeObserver) {
+        resizeObserver.disconnect()
+      }
       resizeObserver = new ResizeObserver(() => {
-        chartInstance.resize()
+        if (chartInstance) {
+          chartInstance.resize()
+        }
       })
       resizeObserver.observe(chartRef.value)
     }
@@ -47,7 +57,11 @@ export function useChart(selector, optionFn, data = {}) {
   // 销毁图表
   const destroyChart = () => {
     if (chartInstance) {
-      chartInstance.dispose()
+      try {
+        chartInstance.dispose()
+      } catch (e) {
+        // 忽略已被销毁的实例
+      }
       chartInstance = null
     }
     if (resizeObserver) {

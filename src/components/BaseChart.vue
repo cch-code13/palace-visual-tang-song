@@ -90,7 +90,11 @@ const initChart = () => {
   
   // 如果已存在实例，先销毁
   if (chartInstance) {
-    chartInstance.dispose()
+    try {
+      chartInstance.dispose()
+    } catch (e) {
+      // 忽略已被销毁的实例
+    }
   }
   
   // 创建新实例
@@ -312,7 +316,11 @@ onMounted(() => {
 onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   loadingInstance?.close()
-  chartInstance?.dispose()
+  try {
+    chartInstance?.dispose()
+  } catch (e) {
+    // 忽略已被销毁的实例
+  }
   chartInstance = null
 })
 

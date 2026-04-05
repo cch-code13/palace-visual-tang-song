@@ -481,7 +481,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   stopPlay();
-  chartInstance?.dispose();
+  try {
+    chartInstance?.dispose();
+  } catch (e) {
+    // 忽略已被销毁的实例
+  }
   window.removeEventListener('resize', () => {
     chartInstance?.resize();
   });

@@ -559,7 +559,24 @@ const handleKeydown = (event) => {
         showComparisonDialog.value = false
       }
       break
-
+    case 'arrowup':
+      // 切换到上一个宫殿（不触发朗读）
+      if (palaces.length > 0) {
+        currentPalaceIndex.value = (currentPalaceIndex.value - 1 + palaces.length) % palaces.length
+        const previousPalace = palaces[currentPalaceIndex.value]
+        selectedPalace.value = previousPalace
+      }
+      event.preventDefault()
+      break
+    case 'arrowdown':
+      // 切换到下一个宫殿（不触发朗读）
+      if (palaces.length > 0) {
+        currentPalaceIndex.value = (currentPalaceIndex.value + 1) % palaces.length
+        const nextPalace = palaces[currentPalaceIndex.value]
+        selectedPalace.value = nextPalace
+      }
+      event.preventDefault()
+      break
 
   }
 }

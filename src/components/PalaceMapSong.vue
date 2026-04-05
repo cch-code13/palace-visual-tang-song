@@ -15,7 +15,7 @@ const getCurrentTheme = () => {
 
 // 获取主题对应的文字颜色
 const getTextColor = () => {
-  return getCurrentTheme() === 'dark' ? '#ffffff' : '#333333';
+  return getCurrentTheme() === 'dark' ? '#ffffff' : '#5A2D18';
 };
 
 // 获取主题对应的边框颜色
@@ -51,7 +51,11 @@ onMounted(() => {
 
 onUnmounted(() => {
   if (myChart) {
-    myChart.dispose()
+    try {
+      myChart.dispose()
+    } catch (e) {
+      // 忽略已被销毁的实例
+    }
   }
   window.removeEventListener('resize', handleResize)
   
@@ -72,10 +76,14 @@ const initChart = () => {
   if (!charts.value) return
   
   // 如果图表已存在，先销毁旧实例
-  if (myChart) {
-    myChart.dispose()
-    myChart = null
-  }
+    if (myChart) {
+      try {
+        myChart.dispose()
+      } catch (e) {
+        // 忽略已被销毁的实例
+      }
+      myChart = null
+    }
   
   myChart = echarts.init(charts.value)
   //注册地图名
@@ -185,7 +193,7 @@ const initChart = () => {
         },
         label: {
           show: true,
-          color: "#e6b422",
+          color: getCurrentTheme() === 'dark' ? "#e6b422" : "#5A2D18",
           fontWeight: 'bold',
           backgroundColor: getCurrentTheme() === 'dark' ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)',
           borderColor: borderColor,
