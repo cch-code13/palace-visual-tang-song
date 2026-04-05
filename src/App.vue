@@ -14,7 +14,7 @@ const ChartPieRegion = defineAsyncComponent(() => import('./components/ChartPieR
 const ChartBarArea = defineAsyncComponent(() => import('./components/ChartBarArea.vue'))
 const ChartTrend = defineAsyncComponent(() => import('./components/ChartTrend.vue'))
 import { ElMessage } from 'element-plus'
-import { Mic, Document, VideoPlay, VideoPause, ArrowLeft, ArrowRight, Setting } from '@element-plus/icons-vue'
+import { Mic, Document, VideoPlay, VideoPause, ArrowLeft, ArrowRight, Setting, Search, Close, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 // 加载状态
 const isLoading = ref(true)
 const isFiltering = ref(false)
@@ -1096,7 +1096,7 @@ const exportToPDF = async () => {
         <div style="margin-bottom: 30px; background: #f0f7ff; padding: 20px; border-radius: 8px; border-left: 4px solid #1890ff;">
           <h2 style="font-size: 18px; font-weight: bold; margin-bottom: 10px; color: #333;">📝 简要说明</h2>
           <p style="margin-bottom: 8px; font-size: 14px; line-height: 1.6; color: #333;">本数据来源于历史文献和考古资料，展示了唐宋两代宫殿建筑的分布情况。</p>
-          <p style="font-size: 14px; color: var(--text-body, #333333);">数据统计时间：2026年2月</p>
+          <p style="font-size: 14px; color: var(--text-body, #333333);">数据统计时间：2025年12月-2026年1月 数据收集与整理</p>
         </div>
         
         <div style="margin-bottom: 30px; background: #fff7f0; padding: 20px; border-radius: 8px; border-left: 4px solid #fa8c16;">
@@ -1361,6 +1361,7 @@ const handleTimePeriodClick = (period) => {
 // 历史浏览记录
 const historyRecords = ref([])
 const showHistoryDialog = ref(false)
+const showShortcutsDialog = ref(false)
 
 // 从本地存储加载历史记录
 const loadHistoryRecords = () => {
@@ -1608,6 +1609,20 @@ const comparisonData = computed(() => {
             inactive-color="#c44536"
           />
         </div>
+        
+        <!-- 快捷键指南按钮 -->
+        <div class="settings-container">
+          <el-button
+            type="primary"
+            plain
+            :class="{ 'dark': isDarkMode }"
+            style="margin-left: 10px;"
+            @click="showShortcutsDialog = true"
+          >
+            <el-icon><Setting /></el-icon>
+            快捷键指南
+          </el-button>
+        </div>
       </div>
 
       <!-- 移动端抽屉导航 -->
@@ -1708,7 +1723,7 @@ const comparisonData = computed(() => {
               </el-dropdown>
             </div>
             <div class="data-info" style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: #A64B2A;">
-              <p>数据统计时间：2026年2月，基于历史文献和考古资料整理 | 数据总量：{{ palaces.length }} 座宫殿</p>
+              <p>数据统计时间：2025年12月-2026年1月，基于历史文献和考古资料整理 | 数据总量：{{ palaces.length }} 座宫殿</p>
               <p>数据来源：《中国古代建筑史》、唐宋宫殿考古发掘报告、国家文物局公开遗址数据，仅用于参赛，不用于商业用途</p>
               <p>数据局限性：本项目仅统计有明确考古记载、遗址可追溯的唐宋宫殿建筑，不含已完全损毁、无实测数据的宫殿</p>
             </div>
@@ -2004,7 +2019,7 @@ const comparisonData = computed(() => {
             <div style="margin-top: 1rem; text-align: left; max-width: 800px; margin-left: auto; margin-right: auto;">
               <p style="font-size: 0.85rem; color: var(--text-secondary, #cccccc); font-weight: bold; margin-bottom: 0.5rem;">数据来源：</p>
               <p style="font-size: 0.8rem; color: var(--text-body, #aaaaaa); line-height: 1.6; margin-bottom: 1rem;">
-                本项目数据主要来源于《中国古代建筑史》《营造法式》等权威历史文献，结合唐宋宫殿考古发掘报告、国家文物局公开的遗址数据，以及古建筑测绘资料。数据统计时间为2026年2月，涵盖公元582年至1279年间有明确考古记载、遗址可追溯的唐宋宫殿建筑。
+                本项目数据主要来源于《中国古代建筑史》《营造法式》等权威历史文献，结合唐宋宫殿考古发掘报告、国家文物局公开的遗址数据，以及古建筑测绘资料。数据统计时间为2025年12月-2026年1月 数据收集与整理，涵盖公元582年至1279年间有明确考古记载、遗址可追溯的唐宋宫殿建筑。
               </p>
               
               <!-- 数据局限性说明 -->
@@ -2378,6 +2393,46 @@ const comparisonData = computed(() => {
           </div>
         </div>
       </el-dialog>
+
+      <!-- 快捷键说明弹窗 -->
+      <el-dialog
+        v-model="showShortcutsDialog"
+        title="键盘快捷键指南"
+        width="500px"
+        custom-class="shortcuts-dialog"
+      >
+        <div class="shortcuts-content">
+          <div class="shortcut-item">
+            <span class="shortcut-key">
+              <el-icon><Search /></el-icon>
+              <span>S</span>
+            </span>
+            <span class="shortcut-description">快速聚焦搜索框</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-key">
+              <el-icon><Close /></el-icon>
+              <span>ESC</span>
+            </span>
+            <span class="shortcut-description">关闭当前弹窗</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-key">
+              <el-icon><ArrowUp /></el-icon>
+            </span>
+            <span class="shortcut-description">切换上一个宫殿</span>
+          </div>
+          <div class="shortcut-item">
+            <span class="shortcut-key">
+              <el-icon><ArrowDown /></el-icon>
+            </span>
+            <span class="shortcut-description">切换下一个宫殿</span>
+          </div>
+        </div>
+        <template #footer>
+          <el-button type="primary" @click="showShortcutsDialog = false">确定</el-button>
+        </template>
+      </el-dialog>
     </div>
   </div>
 </template>
@@ -2417,11 +2472,40 @@ const comparisonData = computed(() => {
 
 .hero-description {
   font-size: 1rem;
-  color: var(--text-body);
+  color: #5A2D18;
   margin: 1rem 0 2rem 0;
   max-width: 600px;
   line-height: 1.6;
   letter-spacing: 1px;
+  background-color: #f5f0e6;
+  border: 1px solid #d4b89a;
+  border-radius: 8px;
+  padding: 15px;
+  text-align: center;
+}
+
+/* 深色主题下的hero样式 */
+.dark .hero-title {
+  color: #e6b422;
+  text-shadow: 0 0 20px rgba(230, 180, 34, 0.8);
+}
+
+.dark .hero-subtitle {
+  color: #f8f5f0;
+}
+
+.dark .hero-motto {
+  color: #f8f5f0;
+  text-shadow: 0 0 10px rgba(230, 180, 34, 0.5);
+}
+
+.dark .hero-description {
+  color: #e0e0e0;
+  background: rgba(0, 0, 0, 0.3);
+  padding: 15px;
+  border-radius: 8px;
+  border: 1px solid rgba(230, 180, 34, 0.3);
+  text-align: center;
 }
 
 /* 加载动画样式 - 卷轴展开效果 */
@@ -2919,14 +3003,22 @@ const comparisonData = computed(() => {
   .top-controls {
     top: 60px;
     right: 10px;
+    left: 10px;
     gap: 0.5rem;
-    flex-direction: column;
-    align-items: flex-end;
+    flex-direction: row;
+    align-items: center;
+    justify-content: flex-end;
+    flex-wrap: wrap;
   }
   
   .top-controls .el-button {
     font-size: 12px;
     padding: 6px 12px;
+    white-space: nowrap;
+  }
+  
+  .top-controls .theme-toggle {
+    margin-left: 0.5rem;
   }
   
   .top-controls .el-switch {
@@ -4226,8 +4318,139 @@ button:focus,
 }
 
 .dark .back-to-top-item .mobile-nav-text {
-  color: #f5c5b6;
-  font-weight: 500;
+  color: #f8f5f0;
+}
+
+/* 快捷键说明弹窗样式 */
+.shortcuts-dialog {
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.shortcuts-content {
+  padding: 20px 0;
+}
+
+.shortcut-item {
+  display: flex;
+  align-items: center;
+  padding: 12px 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.shortcut-item:last-child {
+  border-bottom: none;
+}
+
+.shortcut-key {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100px;
+  height: 48px;
+  background: #F8F5F0; /* 米白底 */
+  color: #5A2D18; /* 深棕字 */
+  border-radius: 8px;
+  font-weight: bold;
+  margin-right: 20px;
+  font-size: 14px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.2);
+  border: 1px solid #EAE0D5; /* 1px 浅米描边 */
+}
+
+.shortcut-key el-icon {
+  font-size: 20px;
+  color: #5A2D18; /* 深棕图标 */
+}
+
+.dark .shortcut-key el-icon {
+  color: #F8F5F0; /* 米白图标 */
+}
+
+.shortcut-description {
+  font-size: 16px;
+  color: var(--text-primary);
+}
+
+/* 深色主题下的快捷键弹窗样式 */
+.dark .shortcuts-dialog {
+  background: var(--bg-dark) !important;
+}
+
+.dark .shortcut-key {
+  background: #3A3A3A; /* 深灰棕底 */
+  color: #F8F5F0; /* 米白字 */
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  border: 1px solid #5A5A5A; /* 1px 深灰描边 */
+}
+
+.dark .shortcut-description {
+  color: var(--text-light);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .shortcuts-dialog {
+    width: 95% !important;
+    max-width: 400px;
+    max-height: 80vh;
+  }
+  
+  .shortcuts-content {
+    padding: 15px 0;
+  }
+  
+  .shortcut-item {
+    padding: 12px 0;
+    flex-wrap: wrap;
+  }
+  
+  .shortcut-key {
+    width: 85px;
+    height: 44px;
+    font-size: 14px;
+    margin-right: 15px;
+    gap: 8px;
+    flex-shrink: 0;
+  }
+  
+  .shortcut-key el-icon {
+    font-size: 18px;
+  }
+  
+  .shortcut-description {
+    font-size: 15px;
+    flex: 1;
+    min-width: 0;
+  }
+  
+  .el-dialog__header {
+    padding: 15px 20px;
+  }
+  
+  .el-dialog__title {
+    font-size: 18px;
+  }
+  
+  .el-dialog__body {
+    padding: 15px 20px;
+    max-height: 50vh;
+    overflow-y: auto;
+  }
+  
+  .shortcuts-dialog .el-dialog__footer {
+    padding: 15px 20px !important;
+    text-align: center !important;
+    display: flex !important;
+    justify-content: center !important;
+  }
+  
+  .el-button {
+    padding: 10px 20px;
+    font-size: 15px;
+    min-width: 120px;
+  }
 }
 
 /* 响应式样式 */
