@@ -59,7 +59,8 @@ src/
 - **宫殿对比**：支持选择两座宫殿进行详细对比
 - **数据导出**：支持导出 CSV 和 PDF 格式数据
 - **历史浏览记录**：记录用户查看过的宫殿，方便快速访问
-- **键盘快捷键**：支持 S 键快速聚焦搜索框，ESC 键关闭弹窗等
+- **键盘快捷键**：支持 S 键快速聚焦搜索框，ESC 键关闭弹窗，上下箭头键切换宫殿
+- **语音播放**：支持宫殿信息的语音播放功能
 
 ## 数据来源
 
@@ -82,6 +83,7 @@ src/
 5. **响应式设计**：适配不同设备，提供良好的移动端体验
 6. **数据精度**：高精度坐标数据，基于考古资料
 7. **用户友好**：直观的界面设计和操作流程
+8. **多模态体验**：集成语音播放功能，提供听觉体验
 
 ## 推荐 IDE 设置
 
@@ -119,47 +121,6 @@ npm run build
 ```
 
 ### 使用 [ESLint](https://eslint.org/) 进行代码检查
-
-```sh
-npm run lint
-```
-
-## Recommended IDE Setup
-
-[VS Code](https://code.visualstudio.com/) + [Vue (Official)](https://marketplace.visualstudio.com/items?itemName=Vue.volar) (and disable Vetur).
-
-## Recommended Browser Setup
-
-- Chromium-based browsers (Chrome, Edge, Brave, etc.):
-  - [Vue.js devtools](https://chromewebstore.google.com/detail/vuejs-devtools/nhdogjmejiglipccpnnnanhbledajbpd)
-  - [Turn on Custom Object Formatter in Chrome DevTools](http://bit.ly/object-formatters)
-- Firefox:
-  - [Vue.js devtools](https://addons.mozilla.org/en-US/firefox/addon/vue-js-devtools/)
-  - [Turn on Custom Object Formatter in Firefox DevTools](https://fxdx.dev/firefox-devtools-custom-object-formatters/)
-
-## Customize configuration
-
-See [Vite Configuration Reference](https://vite.dev/config/).
-
-## Project Setup
-
-```sh
-npm install
-```
-
-### Compile and Hot-Reload for Development
-
-```sh
-npm run dev
-```
-
-### Compile and Minify for Production
-
-```sh
-npm run build
-```
-
-### Lint with [ESLint](https://eslint.org/)
 
 ```sh
 npm run lint
