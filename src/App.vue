@@ -2146,9 +2146,10 @@ const comparisonData = computed(() => {
 .main-content {
   opacity: 0;
   transition: opacity 0.5s ease-in-out;
-  background: var(--bg-gradient);
+  background: transparent;
   min-height: 100vh;
   position: relative;
+  z-index: 1;
 }
 
 .main-content.fade-in {
