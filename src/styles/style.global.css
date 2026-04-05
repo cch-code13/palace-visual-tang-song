@@ -989,12 +989,31 @@ h3 {
   transition: background 0.3s ease, border-color 0.3s ease;
 }
 
-/* 描述文本样式 */
-.description {
-  color: var(--text-body);
+/* 描述文本样式 - 增加优先级确保在浅色主题下生效 */
+:root .description {
+  color: #925A3D !important;
   margin-bottom: 1.5rem;
   font-size: 1.1rem;
   line-height: 1.7;
+  font-weight: 600 !important;
+  text-shadow: 0 1px 3px rgba(0, 0, 0, 0.2) !important;
+  letter-spacing: 0.05em;
+  padding: 0.5rem 0;
+}
+
+/* 深色主题描述文本样式 - 增加优先级确保生效 */
+:root .dark .description {
+  color: #D4AF37 !important;
+}
+
+/* 数据信息样式 - 增加优先级确保在浅色主题下生效 */
+:root .data-info {
+  color: #925A3D !important;
+}
+
+/* 深色主题数据信息样式 - 增加优先级确保生效 */
+:root .dark .data-info {
+  color: #D4AF37 !important;
 }
 
 /* 骨架屏样式 */

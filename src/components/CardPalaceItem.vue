@@ -100,9 +100,15 @@ const handleClick = () => {
 }
 
 .poet-card:hover .poet-name {
-  color: var(--text-accent-alt);
+  color: var(--text-accent);
   text-shadow: 0 0 10px rgba(230, 180, 34, 0.8);
   transition: all 0.3s ease;
+}
+
+/* 深色主题下的调整 */
+.dark .poet-card:hover .poet-name {
+  color: #FFD700;
+  text-shadow: 0 0 15px rgba(255, 215, 0, 0.8);
 }
 
 @keyframes border-flow {

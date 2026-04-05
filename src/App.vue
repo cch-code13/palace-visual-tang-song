@@ -14,6 +14,7 @@ const ChartPieRegion = defineAsyncComponent(() => import('./components/ChartPieR
 const ChartBarArea = defineAsyncComponent(() => import('./components/ChartBarArea.vue'))
 const ChartTrend = defineAsyncComponent(() => import('./components/ChartTrend.vue'))
 import { ElMessage } from 'element-plus'
+import { Mic, Document, VideoPlay, VideoPause, ArrowLeft, ArrowRight, Setting } from '@element-plus/icons-vue'
 // 加载状态
 const isLoading = ref(true)
 const isFiltering = ref(false)
@@ -722,21 +723,233 @@ const scrollToMapSection = (location) => {
   }
 }
 
+// 朗读功能相关状态
+const isReading = ref(false)
+const isPaused = ref(false) // 控制是否暂停
+const currentSpeech = ref(null)
+const speechRate = ref(1) // 语速：0.5-2
+const speechRates = [0.7, 1, 1.3] // 慢速、正常、快速
+const currentPalaceIndex = ref(0)
+const showReadingControls = ref(false) // 控制是否显示朗读控制面板
+const currentReadingMode = ref('') // 控制当前朗读模式：'short' 或 'full'
+
 // 朗读功能
-const readAloud = (text) => {
+const readAloud = (text, rate = speechRate.value) => {
+  // 停止当前朗读
+  stopReading()
+  
   if ('speechSynthesis' in window) {
     const speech = new SpeechSynthesisUtterance(text)
     speech.lang = 'zh-CN'
     speech.volume = 1
-    speech.rate = 0.9
+    speech.rate = rate
     speech.pitch = 1
+    
+    // 监听朗读结束事件
+    speech.onend = () => {
+      isReading.value = false
+      isPaused.value = false
+      currentSpeech.value = null
+      // 不重置currentReadingMode，这样朗读结束后也能保持之前的阅读模式
+      showReadingControls.value = false
+    }
+    
     speechSynthesis.speak(speech)
+    currentSpeech.value = speech
+    isReading.value = true
+    isPaused.value = false
   } else {
     ElMessage({
       message: '您的浏览器不支持语音朗读功能',
       type: 'warning'
     })
   }
+}
+
+// 停止朗读
+const stopReading = () => {
+  if (currentSpeech.value) {
+    speechSynthesis.cancel()
+    currentSpeech.value = null
+    isReading.value = false
+    isPaused.value = false
+    // 不重置currentReadingMode，这样切换宫殿时可以继承之前的阅读模式
+  }
+}
+
+// 暂停/恢复朗读
+const toggleReading = () => {
+  if (!isReading.value) return
+  
+  if (speechSynthesis.paused) {
+    speechSynthesis.resume()
+    isPaused.value = false
+  } else {
+    speechSynthesis.pause()
+    isPaused.value = true
+  }
+}
+
+// 切换语速
+const changeSpeechRate = (rate) => {
+  speechRate.value = rate
+  if (currentSpeech.value) {
+    // 实时更新语速，不停止当前朗读
+    currentSpeech.value.rate = rate
+  }
+}
+
+// 朗读宫殿短信息（默认模式）
+const readPalaceShort = (palace) => {
+  if (!palace) return
+  
+  const shortText = `${palace.name}，${palace.dynasty}${palace.location}，${palace.description?.split('。')[0] || '历史悠久的宫殿建筑'}。`
+  currentReadingMode.value = 'short'
+  readAloud(shortText)
+  
+  // 更新当前宫殿索引
+  currentPalaceIndex.value = palaces.findIndex(p => p.name === palace.name)
+}
+
+// 朗读宫殿全文（详情模式）
+const readPalaceFull = (palace) => {
+  if (!palace) return
+  
+  let fullText = `${palace.name}，${palace.dynasty}宫殿。`
+  
+  // 添加详细描述
+  if (palace.description) {
+    fullText += `${palace.description}。`
+  }
+  
+  // 添加地址信息
+  if (palace.location) {
+    fullText += `地点位于${palace.location}。`
+  }
+  
+  // 添加建造年份
+  if (palace.buildYear) {
+    fullText += `建造于${palace.buildYear}年。`
+  } else if (palace.yearBuilt) {
+    fullText += `建造于${palace.yearBuilt}年。`
+  } else {
+    fullText += `建造年份未知。`
+  }
+  
+  // 添加建筑面积
+  if (palace.area) {
+    // 检查palace.area是否已经包含"约"字
+    if (palace.area.includes('约')) {
+      fullText += `建筑面积${palace.area}。`
+    } else {
+      fullText += `建筑面积约${palace.area}。`
+    }
+  } else {
+    fullText += `建筑面积未知。`
+  }
+  
+  // 添加建筑尺寸
+  if (palace.dimensions) {
+    fullText += `建筑尺寸${palace.dimensions}。`
+  }
+  
+  // 添加屋顶样式
+  if (palace.roofStyle) {
+    fullText += `屋顶样式为${palace.roofStyle}。`
+  }
+  
+  // 添加保存状态
+  if (palace.preservationStatus) {
+    fullText += `保存状态${palace.preservationStatus}。`
+  }
+  
+  // 添加关联皇帝
+  if (palace.associatedEmperor) {
+    fullText += `关联皇帝${palace.associatedEmperor}。`
+  }
+  
+  // 添加文化级别
+  if (palace.culturalLevel) {
+    fullText += `文化级别${palace.culturalLevel}。`
+  }
+  
+  // 添加历史背景
+  if (palace.historicalBackground) {
+    fullText += `${palace.historicalBackground}。`
+  }
+  
+  // 添加建筑特色
+  if (palace.architecturalFeatures) {
+    fullText += `${palace.architecturalFeatures}。`
+  }
+  
+  // 添加主要建筑
+  if (palace.mainHall) {
+    fullText += `主要建筑包括${palace.mainHall}。`
+  } else if (palace.features && palace.features.length > 0) {
+    fullText += `主要建筑包括${palace.features.join('、')}等。`
+  }
+  
+  // 添加文化意义
+  if (palace.culturalSignificance) {
+    fullText += `${palace.culturalSignificance}。`
+  } else if (palace.significance) {
+    fullText += `${palace.significance}。`
+  }
+  
+  currentReadingMode.value = 'full'
+  readAloud(fullText)
+  
+  // 更新当前宫殿索引
+  currentPalaceIndex.value = palaces.findIndex(p => p.name === palace.name)
+}
+
+// 朗读上一个宫殿
+const readPreviousPalace = () => {
+  if (palaces.length === 0) return
+  
+  // 停止当前朗读
+  stopReading()
+  // 关闭控制面板
+  showReadingControls.value = false
+  
+  currentPalaceIndex.value = (currentPalaceIndex.value - 1 + palaces.length) % palaces.length
+  const previousPalace = palaces[currentPalaceIndex.value]
+  selectedPalace.value = previousPalace
+  
+  // 根据当前阅读模式决定调用哪个朗读函数
+  if (currentReadingMode.value === 'full') {
+    readPalaceFull(previousPalace)
+  } else {
+    readPalaceShort(previousPalace)
+  }
+  
+  // 重新打开控制面板
+  showReadingControls.value = true
+}
+
+// 朗读下一个宫殿
+const readNextPalace = () => {
+  if (palaces.length === 0) return
+  
+  // 停止当前朗读
+  stopReading()
+  // 关闭控制面板
+  showReadingControls.value = false
+  
+  currentPalaceIndex.value = (currentPalaceIndex.value + 1) % palaces.length
+  const nextPalace = palaces[currentPalaceIndex.value]
+  selectedPalace.value = nextPalace
+  
+  // 根据当前阅读模式决定调用哪个朗读函数
+  if (currentReadingMode.value === 'full') {
+    readPalaceFull(nextPalace)
+  } else {
+    readPalaceShort(nextPalace)
+  }
+  
+  // 重新打开控制面板
+  showReadingControls.value = true
 }
 
 // 相关宫殿推荐
@@ -1085,8 +1298,15 @@ const handleMapPalaceClick = (palace) => {
           // 标题颜色变化
           const titleElement = palaceCard.querySelector('.poet-name');
           if (titleElement) {
-            titleElement.style.color = 'var(--text-accent-alt)'
-            titleElement.style.textShadow = '0 0 10px rgba(230, 180, 34, 0.8)';
+            // 检查是否为深色主题
+            const isDark = document.documentElement.classList.contains('dark');
+            if (isDark) {
+              titleElement.style.color = '#FFD700';
+              titleElement.style.textShadow = '0 0 15px rgba(255, 215, 0, 0.8)';
+            } else {
+              titleElement.style.color = 'var(--text-accent)';
+              titleElement.style.textShadow = '0 0 10px rgba(230, 180, 34, 0.8)';
+            }
           }
           
           // 滚动到该卡片
@@ -1470,7 +1690,7 @@ const comparisonData = computed(() => {
                 </template>
               </el-dropdown>
             </div>
-            <div class="data-info" style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: var(--text-body, #333333)">
+            <div class="data-info" style="margin-top: 1rem; text-align: center; font-size: 0.85rem; color: #A64B2A;">
               <p>数据统计时间：2026年2月，基于历史文献和考古资料整理 | 数据总量：{{ palaces.length }} 座宫殿</p>
               <p>数据来源：《中国古代建筑史》、唐宋宫殿考古发掘报告、国家文物局公开遗址数据，仅用于参赛，不用于商业用途</p>
               <p>数据局限性：本项目仅统计有明确考古记载、遗址可追溯的唐宋宫殿建筑，不含已完全损毁、无实测数据的宫殿</p>
@@ -1791,16 +2011,107 @@ const comparisonData = computed(() => {
         v-model="showPalaceDialog"
         :title="selectedPalace ? selectedPalace.name + ' 详细信息' : '宫殿详情'"
         width="80%"
-        :before-close="() => { showPalaceDialog = false; restoreScrollPosition() }"
+        :before-close="() => { showPalaceDialog = false; stopReading(); showReadingControls = false; restoreScrollPosition() }"
         custom-class="palace-dialog"
       >
         <div v-if="selectedPalace" class="palace-detail">
           <div class="palace-detail-header">
             <div style="display: flex; align-items: center;">
               <h2 style="color: var(--text-accent); font-weight: bold; font-family: 'Noto Serif SC', serif;">{{ selectedPalace.name }}</h2>
-              <button class="read-aloud-button" @click="readAloud(selectedPalace.name)" title="朗读宫殿名称">
-                <el-icon><i class="el-icon-microphone"></i></el-icon>
-              </button>
+              <div class="read-controls">
+                <button 
+                  class="read-aloud-button" 
+                  :class="{ 'active': isReading && currentReadingMode === 'short', 'show-controls': showReadingControls }" 
+                  @click="() => { 
+                    if (isReading && currentReadingMode === 'short') {
+                      // 再次点击，取消激活状态，暂停朗读，关闭面板
+                      stopReading();
+                      showReadingControls = false;
+                    } else {
+                      // 首次点击，开始朗读，展开面板
+                      readPalaceShort(selectedPalace);
+                      showReadingControls = true;
+                    }
+                  }" 
+                  title="朗读宫殿简介"
+                >
+                  <el-icon><Mic /></el-icon>
+                </button>
+                <button 
+                  class="read-aloud-full-button" 
+                  :class="{ 'active': isReading && currentReadingMode === 'full', 'show-controls': showReadingControls }" 
+                  @click="() => { 
+                    if (isReading && currentReadingMode === 'full') {
+                      // 再次点击，取消激活状态，暂停朗读，关闭面板
+                      stopReading();
+                      showReadingControls = false;
+                    } else {
+                      // 首次点击，开始朗读，展开面板
+                      readPalaceFull(selectedPalace);
+                      showReadingControls = true;
+                    }
+                  }" 
+                  title="朗读全文"
+                >
+                  <el-icon><Document /></el-icon>
+                </button>
+                <el-dropdown trigger="click" placement="bottom">
+                  <button class="control-dropdown-button" title="朗读设置">
+                    <el-icon><Setting /></el-icon>
+                  </button>
+                  <template #dropdown>
+                    <el-dropdown-menu>
+                      <div class="reading-settings-dropdown">
+                        <div class="setting-section">
+                          <div class="setting-label">语速设置</div>
+                          <div class="rate-controls">
+                            <button 
+                              class="rate-button" 
+                              :class="{ active: speechRate === speechRates[0] }" 
+                              @click="changeSpeechRate(speechRates[0])"
+                              title="慢速"
+                            >
+                              慢
+                            </button>
+                            <button 
+                              class="rate-button" 
+                              :class="{ active: speechRate === speechRates[1] }" 
+                              @click="changeSpeechRate(speechRates[1])"
+                              title="正常"
+                            >
+                              中
+                            </button>
+                            <button 
+                              class="rate-button" 
+                              :class="{ active: speechRate === speechRates[2] }" 
+                              @click="changeSpeechRate(speechRates[2])"
+                              title="快速"
+                            >
+                              快
+                            </button>
+                          </div>
+                        </div>
+                      </div>
+                    </el-dropdown-menu>
+                  </template>
+                </el-dropdown>
+                
+                <!-- 朗读控制面板 -->
+                <div class="reading-controls-panel" :class="{ 'show': showReadingControls }">
+                  <div class="control-buttons">
+                    <button class="panel-control-button" @click="readPreviousPalace" title="上一个宫殿">
+                      <el-icon><ArrowLeft /></el-icon>
+                    </button>
+                    <button class="panel-control-button primary" @click="toggleReading" title="播放/暂停">
+                      <el-icon v-if="!isReading || isPaused"><VideoPlay /></el-icon>
+                      <el-icon v-else><VideoPause /></el-icon>
+                    </button>
+                    <button class="panel-control-button" @click="readNextPalace" title="下一个宫殿">
+                      <el-icon><ArrowRight /></el-icon>
+                    </button>
+                  </div>
+                </div>
+              </div>
             </div>
             <el-tag :type="selectedPalace.dynasty === '唐代' ? 'danger' : 'warning'" effect="dark" size="large">
               {{ selectedPalace.dynasty }}
@@ -1885,7 +2196,6 @@ const comparisonData = computed(() => {
             <h3 style="color: var(--text-accent); font-weight: bold; font-family: 'Noto Serif SC', serif; margin-bottom: 0.5rem;">文化价值</h3>
             <p style="color: var(--text-body); line-height: 1.6;">{{ selectedPalace.culturalSignificance }}</p>
           </div>
-          
           <div class="poet-detail-related" v-if="relatedPalaces.length > 0">
             <h3 style="color: var(--text-accent); font-weight: bold; font-family: 'Noto Serif SC', serif; margin: 1.5rem 0 0.5rem 0;">相关宫殿推荐</h3>
             <el-row :gutter="20">
@@ -2303,13 +2613,22 @@ const comparisonData = computed(() => {
 }
 
 .loading-subtitle {
-  color: #2c3e50;
+  color: #B89A4A;
   font-size: 1.2rem;
   font-family: 'Noto Serif SC', serif;
   margin: 0 0 20px 0;
-  opacity: 0.9;
-  animation: fadeIn 3s ease-in-out infinite;
+  opacity: 1;
+  animation: subtitleFloat 3s ease-in-out infinite;
   transition: color 0.5s ease-in-out;
+}
+
+@keyframes subtitleFloat {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-5px);
+  }
 }
 
 .loading-subtitle.dark {
@@ -2783,56 +3102,154 @@ const comparisonData = computed(() => {
   text-align: center;
 }
 
+/* 分页组件样式 - 增加优先级确保在浅色主题下生效 */
+.el-pagination {
+  color: #A64B2A !important;
+}
+
+.el-pagination * {
+  color: #A64B2A !important;
+}
+
 .el-pagination .el-pagination__total,
 .el-pagination .el-pagination__sizes,
-.el-pagination .el-pagination__jump {
-  color: #f0e6d6;
+.el-pagination .el-pagination__jump,
+.el-pagination .el-pagination__text {
+  color: #A64B2A !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
 }
 
 .el-pagination .el-select .el-input__inner {
-  background: #2a213a;
-  border: 1px solid #5a3d7a;
-  color: #f0e6d6;
+  background: var(--card-bg) !important;
+  border: 1px solid #A64B2A !important;
+  color: #A64B2A !important;
+  font-size: 14px !important;
 }
 
 .el-pagination .el-pagination__button {
-  background: #2a213a;
-  border: 1px solid #5a3d7a;
-  color: #f0e6d6;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+  background: var(--card-bg) !important;
+  border: 1px solid #A64B2A !important;
+  color: #A64B2A !important;
+  border-radius: 4px !important;
+  transition: all 0.3s ease !important;
+  font-size: 14px !important;
 }
 
 .el-pagination .el-pagination__button:hover {
-  background: #d4a373;
-  color: #1a1429;
-  border-color: #d4a373;
+  background: #A64B2A !important;
+  color: #ffffff !important;
+  border-color: #A64B2A !important;
 }
 
 .el-pagination .el-pagination__button:disabled {
-  background: #2a213a;
-  border: 1px solid #5a3d7a;
-  color: #9a8ba6;
+  background: var(--card-bg) !important;
+  border: 1px solid #A64B2A !important;
+  color: #A64B2A !important;
+  opacity: 0.6 !important;
 }
 
 .el-pagination .el-pager li {
-  background: #2a213a;
-  border: 1px solid #5a3d7a;
-  color: #f0e6d6;
-  border-radius: 4px;
-  transition: all 0.3s ease;
+  background: var(--card-bg) !important;
+  border: 1px solid #A64B2A !important;
+  color: #A64B2A !important;
+  border-radius: 4px !important;
+  transition: all 0.3s ease !important;
+  font-size: 14px !important;
 }
 
 .el-pagination .el-pager li:hover {
-  background: #d4a373;
-  color: #1a1429;
-  border-color: #d4a373;
+  background: #A64B2A !important;
+  color: #ffffff !important;
+  border-color: #A64B2A !important;
 }
 
 .el-pagination .el-pager li.active {
-  background: #d4a373;
-  color: #1a1429;
-  border-color: #d4a373;
+  background: #A64B2A !important;
+  color: #ffffff !important;
+  border-color: #A64B2A !important;
+}
+
+.el-pagination .el-input__inner {
+  background: var(--card-bg) !important;
+  border: 1px solid #A64B2A !important;
+  color: #A64B2A !important;
+  font-size: 14px !important;
+}
+
+/* 深色主题分页样式 - 增加优先级确保生效 */
+:root.dark .el-pagination {
+  color: #D4AF37 !important;
+}
+
+:root.dark .el-pagination * {
+  color: #D4AF37 !important;
+}
+
+:root.dark .el-pagination .el-pagination__total,
+:root.dark .el-pagination .el-pagination__sizes,
+:root.dark .el-pagination .el-pagination__jump,
+:root.dark .el-pagination .el-pagination__text {
+  color: #D4AF37 !important;
+  font-weight: 500 !important;
+  font-size: 14px !important;
+}
+
+:root.dark .el-pagination .el-select .el-input__inner {
+  background: var(--card-bg) !important;
+  border: 1px solid #D4AF37 !important;
+  color: #D4AF37 !important;
+  font-size: 14px !important;
+}
+
+:root.dark .el-pagination .el-pagination__button {
+  background: var(--card-bg) !important;
+  border: 1px solid #D4AF37 !important;
+  color: #D4AF37 !important;
+  border-radius: 4px !important;
+  transition: all 0.3s ease !important;
+  font-size: 14px !important;
+}
+
+:root.dark .el-pagination .el-pagination__button:hover {
+  background: #D4AF37 !important;
+  color: #000000 !important;
+  border-color: #D4AF37 !important;
+}
+
+:root.dark .el-pagination .el-pagination__button:disabled {
+  background: var(--card-bg) !important;
+  border: 1px solid #D4AF37 !important;
+  color: #D4AF37 !important;
+  opacity: 0.6 !important;
+}
+
+:root.dark .el-pagination .el-pager li {
+  background: var(--card-bg) !important;
+  border: 1px solid #D4AF37 !important;
+  color: #D4AF37 !important;
+  border-radius: 4px !important;
+  transition: all 0.3s ease !important;
+  font-size: 14px !important;
+}
+
+:root.dark .el-pagination .el-pager li:hover {
+  background: #D4AF37 !important;
+  color: #000000 !important;
+  border-color: #D4AF37 !important;
+}
+
+:root.dark .el-pagination .el-pager li.active {
+  background: #D4AF37 !important;
+  color: #000000 !important;
+  border-color: #D4AF37 !important;
+}
+
+:root.dark .el-pagination .el-input__inner {
+  background: var(--card-bg) !important;
+  border: 1px solid #D4AF37 !important;
+  color: #D4AF37 !important;
+  font-size: 14px !important;
 }
 
 /* 容器样式 */
@@ -3349,6 +3766,324 @@ button:focus,
   background: #e6b422;
   color: #1a1429;
   transform: scale(1.1);
+}
+
+/* 朗读按钮样式 */
+.read-aloud-button {
+  background: transparent;
+  border: 1px solid #e6b422;
+  color: #e6b422;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  margin-left: 10px;
+  position: relative;
+}
+
+.read-aloud-button:hover {
+  background: #e6b422;
+  color: #1a1429;
+  transform: scale(1.1);
+}
+
+/* 朗读按钮激活状态 - 呼吸动画 */
+.read-aloud-button.active {
+  background: #e6b422;
+  color: #1a1429;
+  animation: breathing 2s ease-in-out infinite;
+}
+
+@keyframes breathing {
+  0%, 100% {
+    box-shadow: 0 0 5px #e6b422, 0 0 10px #e6b422;
+  }
+  50% {
+    box-shadow: 0 0 10px #e6b422, 0 0 20px #e6b422;
+  }
+}
+
+/* 朗读全文按钮样式 */
+.read-aloud-full-button {
+  background: transparent;
+  border: 1px solid #e6b422;
+  color: #e6b422;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.read-aloud-full-button:hover {
+  background: #e6b422;
+  color: #1a1429;
+  transform: scale(1.1);
+}
+
+/* 长读按钮激活状态 - 呼吸动画 */
+.read-aloud-full-button.active {
+  background: #e6b422;
+  color: #1a1429;
+  animation: breathing 2s ease-in-out infinite;
+}
+
+/* 语速按钮样式 */
+.rate-button {
+  background: #EAE0D5; /* 浅主题按钮默认态 */
+  border: 1px solid #D4AF37;
+  color: #555555;
+  border-radius: 4px;
+  padding: 4px 8px;
+  cursor: pointer;
+  transition: all 0.3s ease;
+  font-size: 0.8rem;
+}
+
+.rate-button:hover {
+  background: #C8A951; /* 浅主题按钮 hover 态 */
+  color: #FFFFFF;
+  transform: scale(1.05);
+}
+
+.rate-button.active {
+  background: #D4AF37; /* 浅主题按钮选中态 */
+  color: #FFFFFF;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(212, 175, 55, 0.3);
+}
+
+/* 深色主题语速按钮 */
+.dark .rate-button {
+  background: #443933; /* 深主题按钮默认态 */
+  border: 1px solid #FFD700;
+  color: #F8F5F0;
+}
+
+.dark .rate-button:hover {
+  background: #D4AF37; /* 深主题按钮 hover 态 */
+  color: #2C241F;
+  transform: scale(1.05);
+}
+
+.dark .rate-button.active {
+  background: #FFD700; /* 深主题按钮选中态 */
+  color: #2C241F;
+  font-weight: bold;
+  box-shadow: 0 2px 4px rgba(255, 215, 0, 0.4);
+}
+
+/* 朗读控制容器样式 */
+.read-controls {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: 10px;
+  position: relative;
+}
+
+/* 控制下拉按钮样式 */
+.control-dropdown-button {
+  background: transparent;
+  border: 1px solid #e6b422;
+  color: #e6b422;
+  border-radius: 50%;
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.control-dropdown-button:hover {
+  background: #e6b422;
+  color: #1a1429;
+  transform: scale(1.1);
+}
+
+/* 下拉菜单内容样式 */
+.reading-settings-dropdown {
+  padding: 15px;
+  min-width: 220px;
+  background: #F8F5F0; /* 浅主题背景 */
+  border: 1px solid #EAE0D5;
+  border-radius: 8px;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+}
+
+/* 深色主题下拉菜单 */
+.dark .reading-settings-dropdown {
+  background: #2C241F; /* 深主题背景 */
+  border: 1px solid #443933;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3);
+}
+
+/* 覆盖Element Plus下拉菜单默认样式 */
+.el-dropdown-menu {
+  background: #F8F5F0 !important;
+  border: 1px solid #EAE0D5 !important;
+  border-radius: 8px !important;
+  box-shadow: 0 2px 8px rgba(0,0,0,0.08) !important;
+}
+
+/* 深色主题下的Element Plus下拉菜单 */
+.dark .el-dropdown-menu {
+  background: #2C241F !important;
+  border: 1px solid #443933 !important;
+  box-shadow: 0 2px 12px rgba(0,0,0,0.3) !important;
+}
+
+/* 设置项样式 */
+.setting-section {
+  margin-bottom: 15px;
+}
+
+.setting-label {
+  font-size: 0.9rem;
+  font-weight: 500;
+  margin-bottom: 8px;
+  color: #555555; /* 浅主题文字颜色 */
+}
+
+/* 深色主题设置标签 */
+.dark .setting-label {
+  color: #F8F5F0; /* 深主题文字颜色 */
+}
+
+/* 语速控制容器样式 */
+.rate-controls {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+}
+
+
+
+/* 朗读控制面板样式 */
+.reading-controls-panel {
+  position: absolute;
+  top: 100%;
+  left: 0;
+  margin-top: 8px;
+  background: var(--card-bg);
+  border: 1px solid var(--border-color);
+  border-radius: 8px;
+  padding: 10px;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+  min-width: 180px;
+  opacity: 0;
+  transform: translateY(-10px);
+  transition: all 0.3s ease;
+  pointer-events: none;
+  z-index: 1000;
+}
+
+/* 朗读控制面板显示状态 */
+.reading-controls-panel.show {
+  opacity: 1;
+  transform: translateY(0);
+  pointer-events: auto;
+}
+
+/* 控制面板按钮容器样式 */
+.control-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+/* 控制面板按钮样式 */
+.panel-control-button {
+  background: transparent;
+  border: 1px solid var(--text-accent);
+  color: var(--text-accent);
+  border-radius: 50%;
+  width: 32px;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.3s ease;
+}
+
+.panel-control-button:hover {
+  background: var(--text-accent);
+  color: #ffffff;
+  transform: scale(1.1);
+}
+
+.panel-control-button.primary {
+  background: var(--text-accent);
+  color: #ffffff;
+}
+
+.panel-control-button.primary:hover {
+  background: #c89b16;
+  transform: scale(1.1);
+}
+
+/* 宫殿详情标题样式 */
+.palace-detail-header h2 {
+  color: var(--text-accent);
+  font-weight: bold;
+  font-family: 'Noto Serif SC', serif;
+  text-shadow: 0 0 5px rgba(230, 180, 34, 0.5);
+}
+
+/* 深色主题下的宫殿详情标题 */
+.dark .palace-detail-header h2 {
+  color: #FFD700;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.8);
+}
+
+/* 移动端适配 */
+@media (max-width: 768px) {
+  .read-controls {
+    gap: 4px;
+    margin-left: 5px;
+  }
+  
+  .read-aloud-button,
+  .read-aloud-full-button,
+  .control-dropdown-button {
+    width: 24px;
+    height: 24px;
+    font-size: 12px;
+  }
+  
+  .reading-controls-panel {
+    min-width: 150px;
+    padding: 8px;
+  }
+  
+  .panel-control-button {
+    width: 28px;
+    height: 28px;
+    font-size: 12px;
+  }
+  
+  .reading-settings-dropdown {
+    min-width: 180px;
+    padding: 10px;
+  }
+  
+  .rate-button,
+  .mode-button {
+    padding: 3px 6px;
+    font-size: 0.7rem;
+  }
 }
 
 .mobile-nav-toggle .el-button {

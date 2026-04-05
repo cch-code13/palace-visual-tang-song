@@ -130,6 +130,7 @@ const initChart = () => {
             <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">朝代：宋代</div>
             <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">宫殿名称：${params.value[4]}</div>
             <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建筑面积：${params.value[3].toFixed(1)} 万平方米</div>
+            <div style="color: #e6b422; margin-top: 5px; font-size: 12px;">点击可查看宫殿详情</div>
           </div>
         `
       },
