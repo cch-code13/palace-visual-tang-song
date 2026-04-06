@@ -121,7 +121,7 @@ const initChart = () => {
         left: 'right',
         bottom: '5',
         style: {
-          text: '地图来源：天地图・标准地图服务（审图号：GS (2024) XXXX 号）',
+          text: '地图来源：天地图・标准地图服务（审图号：GS (2023) 2767 号）',
           fontSize: 10,
           fill: '#e6b422'
         }
