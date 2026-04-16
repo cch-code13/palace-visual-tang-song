@@ -9,6 +9,7 @@ import { ref, onMounted, onUnmounted, watch } from 'vue';
 import * as echarts from 'echarts';
 import palaces from '@/data/data.palaces.json';
 
+const emit = defineEmits(['palaceClick']);
 const chart = ref(null);
 let myChart = null;
 
@@ -75,57 +76,59 @@ const initChart = () => {
   if (!chart.value) return;
   
   // 如果图表已存在，先销毁旧实例
-    if (myChart) {
-      try {
-        myChart.dispose();
-      } catch (e) {
-        // 忽略已被销毁的实例
-      }
-      myChart = null;
+  if (myChart) {
+    try {
+      myChart.dispose();
+    } catch (e) {
+      // 忽略已被销毁的实例
     }
+    myChart = null;
+  }
   
+  // 重新创建图表实例
   myChart = echarts.init(chart.value);
   
-  // 分别统计唐代和宋代的宫殿数量
+  // 分别筛选唐代和宋代的宫殿
   const tangPalaces = palaces.filter(palace => palace.dynasty === '唐代');
   const songPalaces = palaces.filter(palace => palace.dynasty === '宋代');
   
-  // 按省份统计唐代宫殿数量
-  const tangProvinceCount = tangPalaces.reduce((acc, palace) => {
-    const province = palace.location.split(' ')[0];
-    acc[province] = (acc[province] || 0) + 1;
-    return acc;
-  }, {});
+  // 提取宫殿名称和面积数据
+  const tangNames = tangPalaces.map(palace => palace.name);
+  const tangAreas = tangPalaces.map(palace => {
+    const areaValue = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0;
+    return { value: areaValue, palace: palace };
+  });
   
-  // 按省份统计宋代宫殿数量
-  const songProvinceCount = songPalaces.reduce((acc, palace) => {
-    const province = palace.location.split(' ')[0];
-    acc[province] = (acc[province] || 0) + 1;
-    return acc;
-  }, {});
+  const songNames = songPalaces.map(palace => palace.name);
+  const songAreas = songPalaces.map(palace => {
+    const areaValue = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0;
+    return { value: areaValue, palace: palace };
+  });
   
-  // 获取所有省份
-  const provinces = [...new Set([...Object.keys(tangProvinceCount), ...Object.keys(songProvinceCount)])];
+  // 合并所有宫殿名称
+  const allNames = [...tangNames, ...songNames];
   
-  // 转换为ECharts数据格式
-  const tangData = provinces.map(province => tangProvinceCount[province] || 0);
-  const songData = provinces.map(province => songProvinceCount[province] || 0);
-  
+  const isDark = getCurrentTheme() === 'dark';
   const textColor = getTextColor();
   const borderColor = getBorderColor();
   const splitLineColor = getSplitLineColor();
   const backgroundColor = getBackgroundColor();
-  const isDark = getCurrentTheme() === 'dark';
   const strokeColor = isDark ? '#ffffff' : '#333333';
   
   const option = {
     backgroundColor: backgroundColor, // 动态背景色
     title: {
-      text: '唐宋宫殿分布对比',
+      text: '唐宋宫殿规模对比',
+      subtext: '基于建筑面积（万平方米）',
       textStyle: {
         color: textColor,
         fontFamily: 'Noto Serif SC',
         fontSize: 16
+      },
+      subtextStyle: {
+        color: isDark ? '#e6b422' : '#c44536',
+        fontFamily: 'Noto Serif SC',
+        fontSize: 12
       }
     },
     tooltip: {
@@ -133,26 +136,60 @@ const initChart = () => {
       axisPointer: {
         type: 'shadow'
       },
-      backgroundColor: isDark ? 'rgba(30,20,48,0.9)' : 'rgba(255,250,240,0.9)',
-      borderColor: isDark ? '#e6b422' : '#c44536',
-      textStyle: {
-        color: isDark ? '#ffffff' : '#333333',
-        fontFamily: 'Noto Serif SC'
-      }
+      formatter: function(params) {
+        const isDark = getCurrentTheme() === 'dark';
+        const accentColor = isDark ? '#e6b422' : '#c44536';
+        
+        let result = `<div style="padding: 10px; background: ${isDark ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)'} ; border: 1px solid ${borderColor}; border-radius: 8px;">`;
+        
+        params.forEach(param => {
+          const palace = param.seriesType === 'bar' ? 
+            (param.seriesName === '唐代' ? tangAreas[param.dataIndex]?.palace : songAreas[param.dataIndex]?.palace) : 
+            null;
+          
+          result += `<div style="font-weight: bold; color: ${accentColor}; margin-bottom: 5px;">${param.name}</div>`;
+          if (palace) {
+            result += `
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">朝代：${palace.dynasty}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">位置：${palace.location}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建造年代：${palace.buildYear}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建筑面积：${palace.area}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">文物等级：${palace.culturalLevel}</div>
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(230, 180, 34, 0.3);">
+                <div style="color: ${accentColor}; font-size: 0.9rem;">点击查看宫殿详情</div>
+              </div>
+            `;
+          } else {
+            result += `<div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建筑面积：${param.value} 万平方米</div>`;
+          }
+        });
+        
+        result += '</div>';
+        return result;
+      },
+      backgroundColor: 'transparent'
     },
     legend: {
       data: ['唐代', '宋代'],
       textStyle: {
-        color: textColor,
-        fontFamily: 'Noto Serif SC'
+        color: isDark ? '#e6b422' : '#c44536',
+        fontFamily: 'Noto Serif SC',
+        fontSize: 12,
+        fontWeight: 'bold'
       },
-      backgroundColor: isDark ? 'rgba(30,20,48,0.8)' : 'rgba(255,250,240,0.8)',
+      backgroundColor: isDark ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.95)',
       borderColor: isDark ? '#e6b422' : '#c44536',
-      borderWidth: 1
+      borderWidth: 2,
+      top: 10,
+      right: 10,
+      padding: 8,
+      itemWidth: 16,
+      itemHeight: 16,
+      z: 1000
     },
     xAxis: {
       type: 'category',
-      data: provinces,
+      data: allNames,
       axisLabel: {
         color: textColor,
         fontFamily: 'Noto Serif SC',
@@ -166,6 +203,11 @@ const initChart = () => {
     },
     yAxis: {
       type: 'value',
+      name: '建筑面积（万平方米）',
+      nameTextStyle: {
+        color: textColor,
+        fontFamily: 'Noto Serif SC'
+      },
       axisLabel: {
         color: textColor,
         fontFamily: 'Noto Serif SC'
@@ -184,7 +226,7 @@ const initChart = () => {
     series: [
       {
         name: '唐代',
-        data: tangData,
+        data: tangAreas.map(item => item.value),
         type: 'bar',
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
@@ -194,21 +236,35 @@ const initChart = () => {
           borderColor: strokeColor,
           borderWidth: 1
         },
+        label: {
+          show: true,
+          position: 'top',
+          color: textColor,
+          fontFamily: 'Noto Serif SC',
+          fontSize: 10
+        },
         animationDelay: function(idx) {
           return idx * 100;
         }
       },
       {
         name: '宋代',
-        data: songData,
+        data: songAreas.map(item => item.value),
         type: 'bar',
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: isDark ? '#ffd700' : '#e6b422' }, // 强调色：金色
-            { offset: 1, color: isDark ? '#b88b1a' : '#b88b1a' }
+            { offset: 0, color: isDark ? '#4a90e2' : '#4a90e2' }, // 宋代：青蓝色
+            { offset: 1, color: isDark ? '#3a7bc8' : '#3a7bc8' }
           ]),
           borderColor: strokeColor,
           borderWidth: 1
+        },
+        label: {
+          show: true,
+          position: 'top',
+          color: textColor,
+          fontFamily: 'Noto Serif SC',
+          fontSize: 10
         },
         animationDelay: function(idx) {
           return idx * 100 + 100;
@@ -225,6 +281,31 @@ const initChart = () => {
   
   myChart.setOption(option);
   
+  // 添加点击事件
+  myChart.on('click', function(params) {
+    if (params.componentType === 'series' && params.seriesType === 'bar') {
+      const palace = params.seriesName === '唐代' ? 
+        tangAreas[params.dataIndex]?.palace : 
+        songAreas[params.dataIndex]?.palace;
+      
+      if (palace) {
+        emit('palaceClick', palace);
+        
+        // 定位到地图
+        if (palace.dynasty === '唐代' && window.locatePalace) {
+          window.locatePalace(palace.id);
+        } else if (palace.dynasty === '宋代' && window.locateSongPalace) {
+          window.locateSongPalace(palace.id);
+        }
+        
+        // 定位到热力图
+        if (window.locateHeatmapPalace) {
+          window.locateHeatmapPalace(palace.id);
+        }
+      }
+    }
+  });
+  
   window.addEventListener('resize', () => {
     myChart.resize();
   });
@@ -238,10 +319,12 @@ const initChart = () => {
   display: flex;
   align-items: center;
   justify-content: center;
+  background: transparent;
 }
 
 .echartsBox {
   width: 100%;
   height: 100%;
+  background: transparent;
 }
 </style>

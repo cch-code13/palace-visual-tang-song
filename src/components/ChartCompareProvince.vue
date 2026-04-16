@@ -3,6 +3,7 @@ import * as echarts from 'echarts';
 import { ref, onMounted, onUnmounted, watch, onUpdated, computed } from 'vue';
 import palaces from '@/data/data.palaces.json';
 
+const emit = defineEmits(['palaceClick']);
 const chartRef = ref(null);
 let chart = null;
 let zoomLevel = 1;
@@ -114,6 +115,7 @@ const initChart = () => {
     const borderColor = getBorderColor();
     const splitLineColor = getSplitLineColor();
     const backgroundColor = getBackgroundColor();
+    const isDark = getCurrentTheme() === 'dark';
     
     const option = {
       backgroundColor: backgroundColor,
@@ -122,22 +124,39 @@ const initChart = () => {
         axisPointer: {
           type: 'shadow'
         },
-        backgroundColor: 'rgba(30,30,30,0.8)',
-        borderColor: '#e6b422',
-        textStyle: {
-          color: '#ffffff',
-          fontFamily: 'Noto Serif SC'
-        }
+        formatter: function(params) {
+          const isDark = getCurrentTheme() === 'dark';
+          const accentColor = isDark ? '#e6b422' : '#c44536';
+          
+          let result = `<div style="padding: 10px; background: ${isDark ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)'} ; border: 1px solid ${accentColor}; border-radius: 8px;">`;
+          result += `<div style="font-weight: bold; color: ${accentColor}; margin-bottom: 5px;">${params[0].name}</div>`;
+          
+          params.forEach(param => {
+            result += `<div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">${param.seriesName}：${param.value.toFixed(1)} 万平方米</div>`;
+          });
+          
+          result += '</div>';
+          return result;
+        },
+        backgroundColor: 'transparent'
       },
       legend: {
         data: ['唐代', '宋代'],
         textStyle: {
-          color: textColor,
-          fontFamily: 'Noto Serif SC'
+          color: isDark ? '#e6b422' : '#c44536',
+          fontFamily: 'Noto Serif SC',
+          fontSize: 12,
+          fontWeight: 'bold'
         },
-        top: 0,
-        // 图例点击切换动画
-        selectedMode: 'multiple'
+        backgroundColor: isDark ? 'rgba(0,0,0,0.95)' : 'rgba(255,255,255,0.95)',
+        borderColor: isDark ? '#e6b422' : '#c44536',
+        borderWidth: 2,
+        top: 10,
+        right: 10,
+        padding: 8,
+        itemWidth: 16,
+        itemHeight: 16,
+        z: 1000
       },
       grid: {
         left: '3%',
@@ -204,8 +223,8 @@ const initChart = () => {
           data: tangData,
           itemStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#c44536' },
-              { offset: 1, color: '#8b3429' }
+              { offset: 0, color: isDark ? '#a0382d' : '#c44536' },
+              { offset: 1, color: isDark ? '#702a1f' : '#8b362a' }
             ]),
             // 毛笔笔触效果
             borderRadius: [10, 10, 0, 0],
@@ -213,6 +232,13 @@ const initChart = () => {
             shadowColor: 'rgba(196, 69, 54, 0.5)',
             shadowOffsetX: 0,
             shadowOffsetY: 2
+          },
+          label: {
+            show: true,
+            position: 'top',
+            color: textColor,
+            fontFamily: 'Noto Serif SC',
+            fontSize: 10
           },
           // 模拟毛笔笔触的柱形宽度
           barWidth: '60%',
@@ -230,8 +256,8 @@ const initChart = () => {
           data: songData,
           itemStyle: {
             color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-              { offset: 0, color: '#e6b422' },
-              { offset: 1, color: '#a88017' }
+              { offset: 0, color: isDark ? '#e6b422' : '#e6b422' },
+              { offset: 1, color: isDark ? '#a88017' : '#a88017' }
             ]),
             // 毛笔笔触效果
             borderRadius: [10, 10, 0, 0],
@@ -239,6 +265,13 @@ const initChart = () => {
             shadowColor: 'rgba(230, 180, 34, 0.5)',
             shadowOffsetX: 0,
             shadowOffsetY: 2
+          },
+          label: {
+            show: true,
+            position: 'top',
+            color: textColor,
+            fontFamily: 'Noto Serif SC',
+            fontSize: 10
           },
           // 模拟毛笔笔触的柱形宽度
           barWidth: '60%',
@@ -260,6 +293,35 @@ const initChart = () => {
     // 监听缩放事件
     chart.on('dataZoom', function(params) {
       updateZoomLevel(params);
+    });
+    
+    // 添加点击事件
+    chart.on('click', function(params) {
+      if (params.componentType === 'series' && params.seriesType === 'bar') {
+        const province = params.name;
+        // 查找该省份的宫殿
+        const provincePalaces = palaces.filter(palace => {
+          return palace.location.includes(province);
+        });
+        
+        if (provincePalaces.length > 0) {
+          // 选择第一个宫殿作为代表
+          const palace = provincePalaces[0];
+          emit('palaceClick', palace);
+          
+          // 定位到地图
+          if (palace.dynasty === '唐代' && window.locatePalace) {
+            window.locatePalace(palace.id);
+          } else if (palace.dynasty === '宋代' && window.locateSongPalace) {
+            window.locateSongPalace(palace.id);
+          }
+          
+          // 定位到热力图
+          if (window.locateHeatmapPalace) {
+            window.locateHeatmapPalace(palace.id);
+          }
+        }
+      }
     });
   }
 };

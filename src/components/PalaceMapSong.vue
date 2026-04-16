@@ -91,16 +91,20 @@ const initChart = () => {
   
   // 筛选宋代宫殿
   const songPalaces = palaces.filter(palace => palace.dynasty === '宋代')
+  console.log('宋代宫殿数量:', songPalaces.length)
+  console.log('宋代宫殿列表:', songPalaces.map(p => p.name))
   
   // 转换为ECharts数据格式
   const seriesData = songPalaces.map(palace => {
     // 提取面积数值，去除单位
-    const areaValue = parseFloat(palace.area.replace(/[^0-9.]/g, ''))
+    const areaValue = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0
+    console.log('处理宫殿:', palace.name, '坐标:', [palace.lng, palace.lat], '面积:', areaValue)
     return {
-      name: palace.location, // 使用完整的位置名称
-      value: [palace.lng, palace.lat, 1, areaValue || 0, palace.name]
+      name: palace.name, // 使用宫殿名称
+      value: [palace.lng, palace.lat, areaValue, palace]
     }
   })
+  console.log('最终处理的宋代宫殿数据:', seriesData)
   
   const textColor = getTextColor();
   const borderColor = getBorderColor();
@@ -125,6 +129,16 @@ const initChart = () => {
           fontSize: 10,
           fill: '#e6b422'
         }
+      },
+      {
+        type: 'text',
+        left: 'left',
+        top: '5',
+        style: {
+          text: '提示：可通过鼠标滚轮缩放地图查看更多宫殿',
+          fontSize: 10,
+          fill: getCurrentTheme() === 'dark' ? '#e6b422' : '#c44536'
+        }
       }
     ],
 
@@ -132,13 +146,18 @@ const initChart = () => {
       trigger: 'item',
       formatter: function(params) {
         const isDark = getCurrentTheme() === 'dark';
+        const palace = params.value[3];
         return `
           <div style="padding: 10px; background: ${isDark ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)'} ; border: 1px solid ${borderColor}; border-radius: 8px;">
-            <div style="font-weight: bold; color: #e6b422; margin-bottom: 5px;">${params.name}</div>
-            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">朝代：宋代</div>
-            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">宫殿名称：${params.value[4]}</div>
-            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建筑面积：${params.value[3].toFixed(1)} 万平方米</div>
-            <div style="color: #e6b422; margin-top: 5px; font-size: 12px;">点击可查看宫殿详情</div>
+            <div style="font-weight: bold; color: #e6b422; margin-bottom: 5px;">${palace.name}</div>
+            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">朝代：${palace.dynasty}</div>
+            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">位置：${palace.location}</div>
+            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建造年代：${palace.buildYear}</div>
+            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建筑面积：${palace.area}</div>
+            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">文物等级：${palace.culturalLevel}</div>
+            <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(230, 180, 34, 0.3);">
+              <div style="color: #e6b422; font-size: 0.9rem;">点击查看宫殿详情</div>
+            </div>
           </div>
         `
       },
@@ -148,8 +167,8 @@ const initChart = () => {
       type: "map",
       map: "chinaMap",
       roam: true,
-      center: [114.0, 33.0], // 中原和江南过渡地区中心坐标，覆盖河南和浙江
-      zoom: 4.5, // 适当缩放，同时显示河南和浙江
+      center: [116.0, 32.0], // 调整中心坐标，覆盖更多宋代宫殿分布区域
+      zoom: 5.0, // 调整缩放级别，确保所有宋代宫殿都能在初始视图中显示
       scaleLimit: {
         min: 3,
         max: 10
@@ -186,13 +205,14 @@ const initChart = () => {
         type: "effectScatter",
         // 设置涟漪效果的配置
         rippleEffect: {
-          number: 2,
-          scale: 2.5,
-          brushType: 'stroke',
-          color: '#e6b422' // 金色涟漪
+          number: 3,
+          scale: 3,
+          brushType: 'fill',
+          color: '#e6b422', // 黄色涟漪
+          period: 3 // 涟漪动画周期
         },
         label: {
-          show: true,
+          show: false, // 默认不显示标签，避免地图拥挤
           color: getCurrentTheme() === 'dark' ? "#e6b422" : "#5A2D18",
           fontWeight: 'bold',
           backgroundColor: getCurrentTheme() === 'dark' ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)',
@@ -202,19 +222,117 @@ const initChart = () => {
             return params.name
           },
           position: 'right',
-          offset: [10, 0]
+          offset: [10, 0],
+          animation: true,
+          animationDuration: 1000,
+          animationEasing: 'cubicOut'
         },
         itemStyle: {
-          color: '#c44536' // 深红色点
+          color: '#e6b422', // 黄色点
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          shadowColor: 'rgba(230, 180, 34, 0.8)',
+          opacity: 0.8,
+          borderColor: '#c44536', // 红色边框
+          borderWidth: 2 // 边框宽度
         },
         data: seriesData,
         coordinateSystem: "geo",
         symbolSize: function(val) {
-          return Math.max(15, val[2] * 2) // 根据宫殿数量动态调整大小
+          // 根据宫殿面积动态调整气泡大小，确保小面积宫殿也能显示明显
+          const area = val[2];
+          return Math.max(20, Math.min(45, (area / 4) + 10)) // 增加基础大小，确保小面积宫殿也能显示
         },
         animation: true,
-        animationDuration: 1000,
-        animationEasing: 'cubicOut'
+        animationDuration: 2000,
+        animationEasing: 'cubicOut',
+        animationDelay: function (idx) {
+          return idx * 100 // 每个点的动画延迟，创造依次出现的效果
+        },
+        emphasis: {
+          label: {
+            show: true // 鼠标悬浮时显示标签
+          },
+          itemStyle: {
+            shadowBlur: 20,
+            shadowOffsetX: 0,
+            shadowColor: 'rgba(230, 180, 34, 0.8)',
+            scale: 1.2
+          },
+          rippleEffect: {
+            scale: 4,
+            period: 2
+          }
+        }
+      },
+      // 添加呼吸灯效果的散点图
+      {
+        type: "scatter",
+        coordinateSystem: "geo",
+        data: seriesData,
+        symbolSize: function(val) {
+          const area = val[2];
+          return Math.max(20, Math.min(45, (area / 4) + 10)) // 与主散点图保持一致
+        },
+        itemStyle: {
+          color: '#e6b422', // 金色点
+          opacity: 0.6
+        },
+        animation: true,
+        animationDuration: 3000,
+        animationEasing: 'easeInOutCubic',
+        animationDelay: function (idx) {
+          return idx * 150 // 每个点的动画延迟
+        },
+        animationDurationUpdate: 3000,
+        animationEasingUpdate: 'easeInOutCubic'
+      },
+      // 添加核心区域标注
+      {
+        type: 'custom',
+        coordinateSystem: 'geo',
+        renderItem: function(params, api) {
+          const coordinates = api.coord([114.35, 34.80]); // 开封
+          return {
+            type: 'text',
+            position: coordinates,
+            style: {
+              text: '宋代都城宫殿群',
+              fontSize: 12,
+              fill: textColor,
+              textAlign: 'center',
+              backgroundColor: getCurrentTheme() === 'dark' ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)',
+              borderColor: borderColor,
+              borderWidth: 1,
+              borderRadius: 4,
+              padding: [5, 10]
+            }
+          };
+        },
+        data: [1]
+      },
+      {
+        type: 'custom',
+        coordinateSystem: 'geo',
+        renderItem: function(params, api) {
+          const coordinates = api.coord([120.15, 30.25]); // 杭州
+          return {
+            type: 'text',
+            position: coordinates,
+            style: {
+              text: '南宋都城宫殿群',
+              fontSize: 12,
+              fill: textColor,
+              textAlign: 'center',
+              backgroundColor: getCurrentTheme() === 'dark' ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)',
+              borderColor: borderColor,
+              borderWidth: 1,
+              borderRadius: 4,
+              padding: [5, 10]
+            }
+          };
+        },
+        data: [1]
       }
     ]
   }
@@ -223,11 +341,8 @@ const initChart = () => {
   
   // 添加地图点击事件
   myChart.on('click', function(params) {
-    if (params.componentType === 'series' && params.seriesType === 'effectScatter') {
-      const location = params.name
-      const palaceName = params.value[4]
-      // 查找对应的宫殿数据
-      const palace = songPalaces.find(p => p.location === location && p.name === palaceName)
+    if (params.componentType === 'series' && (params.seriesType === 'effectScatter' || params.seriesType === 'scatter')) {
+      const palace = params.value[3];
       
       if (palace) {
         // 触发palaceClick事件
@@ -235,6 +350,60 @@ const initChart = () => {
       }
     }
   })
+  
+  // 暴露定位宫殿的方法
+  window.locateSongPalace = function(palaceId) {
+    // 查找对应的宫殿
+    const palace = songPalaces.find(p => p.id === palaceId)
+    if (palace) {
+      const coord = [palace.lng, palace.lat]
+      // 平滑定位到该宫殿
+      myChart.setOption({
+        geo: {
+          center: coord,
+          zoom: 8
+        }
+      }, true)
+      
+      // 触发气泡高亮效果
+      const dataIndex = seriesData.findIndex(item => item.value[3].id === palaceId);
+      if (dataIndex !== -1) {
+        // 触发鼠标悬停效果
+        myChart.dispatchAction({
+          type: 'showTip',
+          seriesIndex: 0,
+          dataIndex: dataIndex
+        });
+        
+        // 闪烁效果
+        const originalSymbolSize = seriesData[dataIndex].symbolSize;
+        seriesData[dataIndex].symbolSize = function() { return 60; };
+        myChart.setOption({
+          series: [{
+            data: seriesData
+          }]
+        });
+        
+        setTimeout(() => {
+          seriesData[dataIndex].symbolSize = originalSymbolSize;
+          myChart.setOption({
+            series: [{
+              data: seriesData
+            }]
+          });
+        }, 2000);
+      }
+    }
+  }
+  
+  // 暴露定位城市的方法（保持向后兼容）
+  window.locateSongCity = function(cityName) {
+    // 查找包含该城市名称的宫殿
+    const palace = songPalaces.find(p => p.location.includes(cityName))
+    if (palace) {
+      window.locateSongPalace(palace.id);
+    }
+  }
 }
 </script>
 <template>

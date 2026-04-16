@@ -1,4 +1,8 @@
 <script setup>
+import { usePalaceStore } from '@/stores/palace';
+import { Star, StarFilled } from '@element-plus/icons-vue';
+import { ElMessage } from 'element-plus';
+
 const props = defineProps({
   poet: {
     type: Object,
@@ -7,9 +11,26 @@ const props = defineProps({
 });
 
 const emit = defineEmits(['click']);
+const store = usePalaceStore();
 
 const handleClick = () => {
   emit('click', props.poet);
+};
+
+const handleFavorite = (event) => {
+  event.stopPropagation(); // 阻止事件冒泡
+  const success = store.toggleFavorite(props.poet);
+  if (success) {
+    ElMessage({
+      message: store.isFavorite(props.poet.id) ? '收藏成功' : '已取消收藏',
+      type: 'success',
+      duration: 1500
+    });
+  }
+};
+
+const isFavorite = () => {
+  return store.isFavorite(props.poet.id);
 };
 </script>
 
@@ -17,9 +38,20 @@ const handleClick = () => {
   <el-card class="poet-card" :body-style="{ padding: '1.5rem' }" @click="handleClick" :data-palace-id="props.poet.id">
     <div class="poet-header">
       <h3 class="poet-name">{{ props.poet.name }}</h3>
-      <el-tag :type="props.poet.dynasty === '唐代' ? 'danger' : 'warning'" effect="dark" size="small">
-        {{ props.poet.dynasty }}
-      </el-tag>
+      <div class="header-actions">
+        <el-tag :type="props.poet.dynasty === '唐代' ? 'danger' : 'warning'" effect="dark" size="small">
+          {{ props.poet.dynasty }}
+        </el-tag>
+        <el-button
+          type="text"
+          @click="handleFavorite"
+          class="favorite-btn"
+          :class="{ 'favorited': isFavorite() }"
+        >
+          <el-icon v-if="isFavorite()"><StarFilled /></el-icon>
+          <el-icon v-else><Star /></el-icon>
+        </el-button>
+      </div>
     </div>
     <div class="poet-info">
       <p class="poet-province">
@@ -28,11 +60,11 @@ const handleClick = () => {
       </p>
       <p class="poet-works">
         <el-icon><i class="el-icon-date"></i></el-icon>
-        建造年份: {{ props.poet.yearBuilt }}
+        建造年份: {{ props.poet.buildYear || props.poet.yearBuilt || '未知' }}
       </p>
       <p class="poet-works">
         <el-icon><i class="el-icon-data-line"></i></el-icon>
-        建筑面积: {{ props.poet.area }} 平方千米
+        建筑面积: {{ props.poet.area }}
       </p>
       <div class="poet-works-list" v-if="props.poet.features && props.poet.features.length > 0">
         <p class="works-title">
@@ -136,6 +168,38 @@ const handleClick = () => {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 1rem;
+}
+
+.header-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.favorite-btn {
+  transition: all 0.3s ease;
+  font-size: 1.2rem;
+}
+
+.favorite-btn:hover {
+  transform: scale(1.2);
+}
+
+.favorite-btn.favorited {
+  color: var(--text-accent);
+  animation: favorite-pulse 0.3s ease;
+}
+
+@keyframes favorite-pulse {
+  0% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.3);
+  }
+  100% {
+    transform: scale(1);
+  }
 }
 
 .poet-name {

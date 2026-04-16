@@ -2,6 +2,26 @@ import { defineStore } from 'pinia'
 import { ref, computed } from 'vue'
 import palacesData from '@/data/data.palaces.json'
 
+// 从localStorage加载收藏数据
+const loadFavorites = () => {
+  try {
+    const favorites = localStorage.getItem('palaceFavorites')
+    return favorites ? JSON.parse(favorites) : []
+  } catch (error) {
+    console.error('Failed to load favorites:', error)
+    return []
+  }
+}
+
+// 保存收藏数据到localStorage
+const saveFavorites = (favorites) => {
+  try {
+    localStorage.setItem('palaceFavorites', JSON.stringify(favorites))
+  } catch (error) {
+    console.error('Failed to save favorites:', error)
+  }
+}
+
 export const usePalaceStore = defineStore('palace', () => {
   // State
   const palaces = ref(palacesData)
@@ -17,6 +37,7 @@ export const usePalaceStore = defineStore('palace', () => {
   const pageSize = ref(8)
   const selectedPalace = ref(null)
   const comparisonPalaces = ref([])
+  const favorites = ref(loadFavorites())
 
   // Getters
   const filteredPalaces = computed(() => {
@@ -87,6 +108,19 @@ export const usePalaceStore = defineStore('palace', () => {
     ]
   })
 
+  // 收藏相关的getters
+  const favoritePalaces = computed(() => {
+    return palaces.value.filter(palace => 
+      favorites.value.some(fav => fav.id === palace.id)
+    )
+  })
+
+  const isFavorite = computed(() => {
+    return (palaceId) => {
+      return favorites.value.some(fav => fav.id === palaceId)
+    }
+  })
+
   // Actions
   const setFilters = (newFilters) => {
     filters.value = { ...filters.value, ...newFilters }
@@ -135,6 +169,43 @@ export const usePalaceStore = defineStore('palace', () => {
     comparisonPalaces.value = []
   }
 
+  // 收藏相关的actions
+  const addFavorite = (palace) => {
+    const existingIndex = favorites.value.findIndex(fav => fav.id === palace.id)
+    if (existingIndex === -1) {
+      favorites.value.push({
+        id: palace.id,
+        timestamp: new Date().toISOString()
+      })
+      saveFavorites(favorites.value)
+      return true
+    }
+    return false
+  }
+
+  const removeFavorite = (palaceId) => {
+    const existingIndex = favorites.value.findIndex(fav => fav.id === palaceId)
+    if (existingIndex !== -1) {
+      favorites.value.splice(existingIndex, 1)
+      saveFavorites(favorites.value)
+      return true
+    }
+    return false
+  }
+
+  const toggleFavorite = (palace) => {
+    const existingIndex = favorites.value.findIndex(fav => fav.id === palace.id)
+    if (existingIndex === -1) {
+      return addFavorite(palace)
+    } else {
+      return removeFavorite(palace.id)
+    }
+  }
+
+  const getFavorites = () => {
+    return favorites.value
+  }
+
   return {
     // State
     palaces,
@@ -144,12 +215,15 @@ export const usePalaceStore = defineStore('palace', () => {
     pageSize,
     selectedPalace,
     comparisonPalaces,
+    favorites,
     // Getters
     filteredPalaces,
     paginatedPalaces,
     totalPalaces,
     dynastyOptions,
     stats,
+    favoritePalaces,
+    isFavorite,
     // Actions
     setFilters,
     resetFilters,
@@ -158,6 +232,10 @@ export const usePalaceStore = defineStore('palace', () => {
     selectPalace,
     addToComparison,
     removeFromComparison,
-    clearComparison
+    clearComparison,
+    addFavorite,
+    removeFavorite,
+    toggleFavorite,
+    getFavorites
   }
 })

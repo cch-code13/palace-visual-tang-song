@@ -13,6 +13,7 @@ const ChartCompareDynasty = defineAsyncComponent(() => import('./components/Char
 const ChartPieRegion = defineAsyncComponent(() => import('./components/ChartPieRegion.vue'))
 const ChartBarArea = defineAsyncComponent(() => import('./components/ChartBarArea.vue'))
 const ChartTrend = defineAsyncComponent(() => import('./components/ChartTrend.vue'))
+const ModuleFavorites = defineAsyncComponent(() => import('./components/ModuleFavorites.vue'))
 import { ElMessage } from 'element-plus'
 import { Mic, Document, VideoPlay, VideoPause, ArrowLeft, ArrowRight, Setting, Search, Close, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
 // 加载状态
@@ -242,6 +243,7 @@ const navItems = [
   { index: 'trend', label: '发展趋势', icon: 'el-icon-data-line' },
   { index: 'distribution', label: '地域分布', icon: 'el-icon-data-pie' },
   { index: 'palaces', label: '宫殿详情', icon: 'el-icon-building' },
+  { index: 'favorites', label: '我的收藏', icon: 'el-icon-star-on' },
   { index: 'timeline', label: '发展历程', icon: 'el-icon-date' },
   { index: 'comparison-dialog', label: '宫殿对比', icon: 'el-icon-s-data' },
 ]
@@ -1762,7 +1764,7 @@ const comparisonData = computed(() => {
               </el-button>
             </div>
             <div class="map-container">
-              <ChartCompareDynasty></ChartCompareDynasty>
+              <ChartCompareDynasty @palace-click="handlePalaceClick"></ChartCompareDynasty>
             </div>
           </section>
 
@@ -1773,7 +1775,7 @@ const comparisonData = computed(() => {
               展示唐宋宫殿在全国范围内的分布密度情况。
             </p>
             <div class="chart-container">
-              <ChartHeatMap></ChartHeatMap>
+              <ChartHeatMap @palace-click="handlePalaceClick"></ChartHeatMap>
             </div>
           </section>
 
@@ -1784,7 +1786,7 @@ const comparisonData = computed(() => {
               唐宋两代宫殿建筑面积对比，展示建筑规模的变化。
             </p>
             <div class="chart-container">
-              <ChartCompareProvince></ChartCompareProvince>
+              <ChartCompareProvince @palace-click="handlePalaceClick"></ChartCompareProvince>
             </div>
           </section>
 
@@ -1971,6 +1973,18 @@ const comparisonData = computed(() => {
                 />
               </div>
             </div>
+          </section>
+
+          <!-- 我的收藏 -->
+          <section id="favorites" class="container scroll-animate" style="margin-bottom: 3rem">
+            <h2 class="section-title">
+              <span class="title-icon"><i class="el-icon-star-on"></i></span>
+              我的收藏
+            </h2>
+            <p class="description" style="letter-spacing: 2px">
+              查看和管理您收藏的宫殿建筑，支持按收藏时间、朝代和建造时间排序。
+            </p>
+            <ModuleFavorites />
           </section>
 
           <!-- 唐宋宫殿发展历程时间轴 - 增强版 -->

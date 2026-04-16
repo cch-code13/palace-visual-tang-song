@@ -10,6 +10,7 @@ import * as echarts from 'echarts';
 import palaces from '@/data/data.palaces.json';
 import { mapData } from '@/assets';
 
+const emit = defineEmits(['palaceClick']);
 const chart = ref(null);
 let myChart = null;
 
@@ -155,6 +156,19 @@ const initChart = () => {
     return [...coord, stats.count]; // 使用宫殿数量作为权重
   });
   
+  // 转换为ECharts散点图数据格式（单宫殿精确坐标）
+  const scatterData = palaces.map(palace => {
+    // 提取面积数值，去除单位
+    const areaValue = parseFloat(palace.area.replace(/[^0-9.]/g, '')) || 0;
+    return {
+      name: palace.name,
+      value: [palace.lng, palace.lat, areaValue, palace],
+      itemStyle: {
+        color: palace.dynasty === '唐代' ? '#c44536' : '#e6b422' // 唐代红色，宋代黄色
+      }
+    };
+  });
+  
   const textColor = getTextColor();
   const borderColor = getBorderColor();
   const backgroundColor = getBackgroundColor();
@@ -162,7 +176,7 @@ const initChart = () => {
   const option = {
     title: {
       text: '宫殿分布热力图',
-      subtext: '权重说明：基于宫殿数量',
+      subtext: '权重说明：基于宫殿数量，叠加单宫殿精确坐标',
       textStyle: {
         color: textColor,
         fontFamily: 'Noto Serif SC',
@@ -184,6 +198,16 @@ const initChart = () => {
           fontSize: 10,
           fill: getCurrentTheme() === 'dark' ? '#e6b422' : '#c44536'
         }
+      },
+      {
+        type: 'text',
+        left: 'left',
+        bottom: '5',
+        style: {
+          text: '坐标来源：考古发掘报告 | 坐标精度：约10米',
+          fontSize: 10,
+          fill: getCurrentTheme() === 'dark' ? '#e6b422' : '#c44536'
+        }
       }
     ],
 
@@ -192,13 +216,34 @@ const initChart = () => {
       formatter: function(params) {
         const isDark = getCurrentTheme() === 'dark';
         const accentColor = isDark ? '#e6b422' : '#c44536';
-        return `
-          <div style="padding: 10px; background: ${isDark ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)'} ; border: 1px solid ${borderColor}; border-radius: 8px;">
-            <div style="font-weight: bold; color: ${accentColor}; margin-bottom: 5px;">${params.name}</div>
-            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">宫殿数量：${params.value[2]} 座</div>
-            <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建筑面积：${provinceStats[params.name]?.area.toFixed(1) || 0} 万平方米</div>
-          </div>
-        `;
+        
+        // 散点图数据
+        if (params.seriesType === 'effectScatter' || params.seriesType === 'scatter') {
+          const palace = params.value[3];
+          return `
+            <div style="padding: 10px; background: ${isDark ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)'} ; border: 1px solid ${borderColor}; border-radius: 8px;">
+              <div style="font-weight: bold; color: ${accentColor}; margin-bottom: 5px;">${palace.name}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">朝代：${palace.dynasty}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">位置：${palace.location}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建造年代：${palace.buildYear}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建筑面积：${palace.area}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">文物等级：${palace.culturalLevel}</div>
+              <div style="margin-top: 8px; padding-top: 8px; border-top: 1px solid rgba(230, 180, 34, 0.3);">
+                <div style="color: ${accentColor}; font-size: 0.9rem;">点击查看宫殿详情</div>
+              </div>
+            </div>
+          `;
+        }
+        // 热力图数据
+        else {
+          return `
+            <div style="padding: 10px; background: ${isDark ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)'} ; border: 1px solid ${borderColor}; border-radius: 8px;">
+              <div style="font-weight: bold; color: ${accentColor}; margin-bottom: 5px;">${params.name}</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">宫殿数量：${params.value[2]} 座</div>
+              <div style="color: ${isDark ? '#ffffff' : '#333333'}; margin: 2px 0;">建筑面积：${provinceStats[params.name]?.area.toFixed(1) || 0} 万平方米</div>
+            </div>
+          `;
+        }
       },
       backgroundColor: 'transparent'
     },
@@ -256,11 +301,136 @@ const initChart = () => {
         animation: true,
         animationDuration: 1000,
         animationEasing: 'cubicOut'
+      },
+      {
+        // 设置涟漪效果的散点图
+        name: '宫殿位置',
+        type: "effectScatter",
+        // 设置涟漪效果的配置
+        rippleEffect: {
+          number: 3,
+          scale: 3,
+          brushType: 'fill',
+          period: 3 // 涟漪动画周期
+        },
+        // 自定义涟漪颜色
+        customRippleEffect: function(params) {
+          return {
+            color: params.data.value[3].dynasty === '唐代' ? '#c44536' : '#e6b422'
+          };
+        },
+        label: {
+          show: false, // 默认不显示标签，避免地图拥挤
+          color: getCurrentTheme() === 'dark' ? "#e6b422" : "#5A2D18",
+          fontWeight: 'bold',
+          backgroundColor: getCurrentTheme() === 'dark' ? 'rgba(30,30,30,0.8)' : 'rgba(255,255,255,0.8)',
+          borderColor: borderColor,
+          borderWidth: 1,
+          formatter: function (params) {
+            return params.name
+          },
+          position: 'right',
+          offset: [10, 0],
+          animation: true,
+          animationDuration: 1000,
+          animationEasing: 'cubicOut'
+        },
+        itemStyle: {
+          shadowBlur: 10,
+          shadowOffsetX: 0,
+          opacity: 0.8,
+          borderColor: '#e6b422', // 金色边框
+          borderWidth: 2 // 边框宽度
+        },
+        data: scatterData,
+        coordinateSystem: "geo",
+        symbolSize: function(val) {
+          // 根据宫殿面积动态调整气泡大小
+          const area = val[2];
+          return Math.max(15, Math.min(40, area / 10)) // 面积越大，气泡越大，限制最大和最小值
+        },
+        animation: true,
+        animationDuration: 2000,
+        animationEasing: 'cubicOut',
+        animationDelay: function (idx) {
+          return idx * 100 // 每个点的动画延迟，创造依次出现的效果
+        },
+        emphasis: {
+          label: {
+            show: true // 鼠标悬浮时显示标签
+          },
+          itemStyle: {
+            shadowBlur: 20,
+            shadowOffsetX: 0,
+            scale: 1.2
+          },
+          rippleEffect: {
+            scale: 4,
+            period: 2
+          }
+        }
       }
     ]
   };
   
   myChart.setOption(option);
+  
+  // 添加地图点击事件
+  myChart.on('click', function(params) {
+    if (params.componentType === 'series' && (params.seriesType === 'effectScatter' || params.seriesType === 'scatter')) {
+      const palace = params.value[3];
+      
+      if (palace) {
+        // 触发palaceClick事件
+        emit('palaceClick', palace);
+      }
+    }
+  });
+  
+  // 暴露定位宫殿的方法
+  window.locateHeatmapPalace = function(palaceId) {
+    // 查找对应的宫殿
+    const palace = palaces.find(p => p.id === palaceId);
+    if (palace) {
+      const coord = [palace.lng, palace.lat];
+      // 平滑定位到该宫殿
+      myChart.setOption({
+        geo: {
+          center: coord,
+          zoom: 8
+        }
+      }, true);
+      
+      // 触发气泡高亮效果
+      const dataIndex = scatterData.findIndex(item => item.value[3].id === palaceId);
+      if (dataIndex !== -1) {
+        // 触发鼠标悬停效果
+        myChart.dispatchAction({
+          type: 'showTip',
+          seriesIndex: 1, // 散点图系列索引
+          dataIndex: dataIndex
+        });
+        
+        // 闪烁效果
+        const originalSymbolSize = scatterData[dataIndex].symbolSize;
+        scatterData[dataIndex].symbolSize = function() { return 60; };
+        myChart.setOption({
+          series: [{
+            data: scatterData
+          }]
+        });
+        
+        setTimeout(() => {
+          scatterData[dataIndex].symbolSize = originalSymbolSize;
+          myChart.setOption({
+            series: [{
+              data: scatterData
+            }]
+          });
+        }, 2000);
+      }
+    }
+  };
 };
 </script>
 

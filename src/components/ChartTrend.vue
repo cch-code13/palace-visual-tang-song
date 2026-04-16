@@ -167,7 +167,10 @@ const getChartOption = (highlightPeriod = null) => {
       textStyle: {
         color: textColor,
         fontFamily: 'Noto Serif SC'
-      }
+      },
+      backgroundColor: getCurrentTheme() === 'dark' ? 'rgba(30,20,48,0.8)' : 'rgba(255,250,240,0.8)',
+      borderColor: getCurrentTheme() === 'dark' ? '#e6b422' : '#c44536',
+      borderWidth: 1
     },
     grid: {
       left: '3%',
