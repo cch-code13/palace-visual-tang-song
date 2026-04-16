@@ -253,8 +253,8 @@ const initChart = () => {
         type: 'bar',
         itemStyle: {
           color: new echarts.graphic.LinearGradient(0, 0, 0, 1, [
-            { offset: 0, color: isDark ? '#4a90e2' : '#4a90e2' }, // 宋代：青蓝色
-            { offset: 1, color: isDark ? '#3a7bc8' : '#3a7bc8' }
+            { offset: 0, color: isDark ? '#B8860B' : '#B8860B' }, // 宋代：黄色
+            { offset: 1, color: isDark ? '#8B6914' : '#8B6914' }
           ]),
           borderColor: strokeColor,
           borderWidth: 1

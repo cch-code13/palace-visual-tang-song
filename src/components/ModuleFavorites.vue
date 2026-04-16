@@ -100,6 +100,19 @@ const handleDrawerClose = () => {
   drawerVisible.value = false;
   selectedPalace.value = null;
 };
+
+// 处理宫殿切换
+const handleChangePalace = (palace) => {
+  selectedPalace.value = palace;
+};
+
+// 处理定位到地图
+const handleLocate = (palace) => {
+  // 触发全局定位事件
+  window.dispatchEvent(new CustomEvent('locate-palace', { 
+    detail: { palace } 
+  }));
+};
 </script>
 
 <template>
@@ -196,7 +209,10 @@ const handleDrawerClose = () => {
     <PalaceDetailDrawer
       v-model:visible="drawerVisible"
       :palace="selectedPalace"
+      :palaces="favoritePalaces"
       @close="handleDrawerClose"
+      @change-palace="handleChangePalace"
+      @locate="handleLocate"
     />
   </div>
 </template>

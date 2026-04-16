@@ -12,18 +12,29 @@ const props = defineProps({
   palace: {
     type: Object,
     default: null
+  },
+  palaces: {
+    type: Array,
+    default: () => []
   }
 });
 
-const emit = defineEmits(['update:visible', 'close']);
+const emit = defineEmits(['update:visible', 'close', 'change-palace', 'locate']);
 
 const store = usePalaceStore();
 const isDarkMode = ref(false);
+const isLocating = ref(false);
 
 // 计算朝代主题色
 const dynastyColor = computed(() => {
   if (!props.palace) return '';
-  return props.palace.dynasty === '唐代' ? '#c44536' : '#4a90e2';
+  if (props.palace.dynasty === '唐代') {
+    return '#c44536'; // 唐代红色
+  } else if (props.palace.dynasty === '宋代') {
+    return '#B8860B'; // 宋代黄色
+  } else {
+    return '#4a90e2'; // 其他朝代蓝色
+  }
 });
 
 // 计算是否为收藏状态
@@ -68,12 +79,71 @@ const handlePanelClick = (event) => {
 
 // 定位至地图
 const locateOnMap = () => {
-  if (props.palace) {
-    // 这里可以添加定位到地图的逻辑
+  if (!props.palace || isLocating.value) return;
+  
+  isLocating.value = true;
+  
+  ElMessage({
+    message: `正在定位到 ${props.palace.name}`,
+    type: 'info',
+    duration: 1500
+  });
+  
+  emit('locate', props.palace);
+  
+  setTimeout(() => {
+    closeDrawer();
+    isLocating.value = false;
+  }, 100);
+};
+
+// 切换到上一个宫殿
+const goToPreviousPalace = () => {
+  if (!props.palace || props.palaces.length === 0) return;
+  
+  if (props.palaces.length === 1) {
+    // 只有一个宫殿时，显示提示
     ElMessage({
-      message: `正在定位到 ${props.palace.name}`,
-      type: 'info'
+      message: '⚠️ 这是唯一的宫殿，无法切换',
+      type: 'warning',
+      duration: 1500
     });
+    return;
+  }
+  
+  const currentIndex = props.palaces.findIndex(p => p.id === props.palace.id);
+  if (currentIndex > 0) {
+    const previousPalace = props.palaces[currentIndex - 1];
+    emit('change-palace', previousPalace);
+  } else {
+    // 如果是第一个，就切换到最后一个
+    const lastPalace = props.palaces[props.palaces.length - 1];
+    emit('change-palace', lastPalace);
+  }
+};
+
+// 切换到下一个宫殿
+const goToNextPalace = () => {
+  if (!props.palace || props.palaces.length === 0) return;
+  
+  if (props.palaces.length === 1) {
+    // 只有一个宫殿时，显示提示
+    ElMessage({
+      message: '⚠️ 这是唯一的宫殿，无法切换',
+      type: 'warning',
+      duration: 1500
+    });
+    return;
+  }
+  
+  const currentIndex = props.palaces.findIndex(p => p.id === props.palace.id);
+  if (currentIndex < props.palaces.length - 1) {
+    const nextPalace = props.palaces[currentIndex + 1];
+    emit('change-palace', nextPalace);
+  } else {
+    // 如果是最后一个，就切换到第一个
+    const firstPalace = props.palaces[0];
+    emit('change-palace', firstPalace);
   }
 };
 
@@ -95,6 +165,8 @@ const removeFavorite = () => {
           message: '已取消收藏',
           type: 'success'
         });
+        // 取消收藏成功后关闭弹窗
+        closeDrawer();
       }
     }).catch(() => {
       // 取消操作
@@ -129,7 +201,7 @@ onUnmounted(() => {
           <div class="header-left">
             <h2 class="palace-name">{{ palace?.name }}</h2>
             <el-tag 
-              :type="palace?.dynasty === '唐代' ? 'danger' : 'primary'" 
+              :type="palace?.dynasty === '唐代' ? 'danger' : (palace?.dynasty === '宋代' ? 'warning' : 'primary')" 
               effect="dark"
             >
               {{ palace?.dynasty }}
@@ -268,6 +340,26 @@ onUnmounted(() => {
         
         <!-- 底部操作栏 -->
         <div class="drawer-footer">
+          <div class="navigation-buttons">
+            <el-button 
+              type="text" 
+              @click="goToPreviousPalace"
+              :style="{
+                color: dynastyColor
+              }"
+            >
+              &lt; 上一个
+            </el-button>
+            <el-button 
+              type="text" 
+              @click="goToNextPalace"
+              :style="{
+                color: dynastyColor
+              }"
+            >
+              下一个 &gt;
+            </el-button>
+          </div>
           <el-button 
             type="primary" 
             @click="locateOnMap"
@@ -275,9 +367,11 @@ onUnmounted(() => {
               backgroundColor: dynastyColor,
               borderColor: dynastyColor
             }"
+            :loading="isLocating"
+            :disabled="isLocating"
           >
             <el-icon><Position /></el-icon>
-            定位至地图
+            {{ isLocating ? '定位中...' : '定位至地图' }}
           </el-button>
           <el-button 
             type="danger" 
@@ -588,7 +682,14 @@ onUnmounted(() => {
   background-color: rgba(255, 255, 255, 0.9);
   display: flex;
   gap: 1rem;
-  justify-content: flex-end;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.navigation-buttons {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
 }
 
 .dark .drawer-footer {
