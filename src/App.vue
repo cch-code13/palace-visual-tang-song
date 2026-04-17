@@ -193,12 +193,13 @@ onMounted(() => {
       
       // 进度完成后开始页面过渡
       setTimeout(() => {
-        filterPalaces() // 初始化筛选
-        window.addEventListener('scroll', handleScroll)
-        window.addEventListener('resize', handleResize)
-        window.addEventListener('keydown', handleKeydown)
-        handleScroll() // 初始检查
-        handleResize() // 初始检查
+          filterPalaces() // 初始化筛选
+          window.addEventListener('scroll', handleScroll)
+          window.addEventListener('resize', handleResize)
+          window.addEventListener('keydown', handleKeydown)
+          window.addEventListener('locate-palace', handleLocatePalaceEvent)
+          handleScroll() // 初始检查
+          handleResize() // 初始检查
 
         // 强制显示宫殿详情卡片章节
         showPalacesSection()
@@ -225,7 +226,32 @@ onUnmounted(() => {
   window.removeEventListener('scroll', handleScroll)
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('keydown', handleKeydown)
+  window.removeEventListener('locate-palace', handleLocatePalaceEvent)
 })
+
+// 处理定位到地图事件
+const handleLocatePalaceEvent = (event) => {
+  const { palace } = event.detail;
+  if (!palace) return;
+  
+  // 根据宫殿的朝代切换到对应的地图视图
+  if (palace.dynasty === '唐代') {
+    // 切换到唐代宫殿视图
+    handleSelect('tang');
+  } else if (palace.dynasty === '宋代') {
+    // 切换到宋代宫殿视图
+    handleSelect('song');
+  }
+  
+  // 在地图加载完成后执行定位
+  setTimeout(() => {
+    if (palace.dynasty === '唐代' && window.locatePalace) {
+      window.locatePalace(palace.id);
+    } else if (palace.dynasty === '宋代' && window.locateSongPalace) {
+      window.locateSongPalace(palace.id);
+    }
+  }, 800);
+};
 
 // 导航栏相关
 const activeIndex = ref('hero')
