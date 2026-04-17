@@ -453,13 +453,13 @@ const activeFilters = computed(() => {
     filters.push({ key: 'dynasty', label: '朝代', value: dynastyFilter.value })
   }
   if (areaFilter.value) {
-    const areaOption = areaOptions.find(option => option.value === areaFilter.value)
+    const areaOption = areaOptions.value.find(option => option.value === areaFilter.value)
     if (areaOption) {
       filters.push({ key: 'area', label: '建筑面积', value: areaOption.label })
     }
   }
   if (sortBy.value) {
-    const sortOption = sortOptions.find(option => option.value === sortBy.value)
+    const sortOption = sortOptions.value.find(option => option.value === sortBy.value)
     if (sortOption) {
       filters.push({ key: 'sort', label: '排序', value: sortOption.label })
     }
