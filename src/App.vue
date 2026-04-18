@@ -1,11 +1,12 @@
 <script setup>
 import palaces from '@/data/data.palaces.json'
-import { onMounted, onUnmounted, ref, computed, watch, shallowRef, defineAsyncComponent } from 'vue'
+import { onMounted, onUnmounted, ref, computed, watch, shallowRef, nextTick, defineAsyncComponent } from 'vue'
 // 懒加载组件
 const PalaceMapTang = defineAsyncComponent(() => import('./components/PalaceMapTang.vue'))
 const PalaceMapSong = defineAsyncComponent(() => import('./components/PalaceMapSong.vue'))
 const ChartCompareProvince = defineAsyncComponent(() => import('./components/ChartCompareProvince.vue'))
 const CardPalaceItem = defineAsyncComponent(() => import('./components/CardPalaceItem.vue'))
+const PalaceShareDialog = defineAsyncComponent(() => import('./components/PalaceShareDialog.vue'))
 const ModuleTimeline = defineAsyncComponent(() => import('./components/ModuleTimeline.vue'))
 const ModuleTimelineEnhanced = defineAsyncComponent(() => import('./components/ModuleTimelineEnhanced.vue'))
 const ChartHeatMap = defineAsyncComponent(() => import('./components/ChartHeatMap.vue'))
@@ -15,7 +16,22 @@ const ChartBarArea = defineAsyncComponent(() => import('./components/ChartBarAre
 const ChartTrend = defineAsyncComponent(() => import('./components/ChartTrend.vue'))
 const ModuleFavorites = defineAsyncComponent(() => import('./components/ModuleFavorites.vue'))
 import { ElMessage } from 'element-plus'
-import { Mic, Document, VideoPlay, VideoPause, ArrowLeft, ArrowRight, Setting, Search, Close, ArrowUp, ArrowDown } from '@element-plus/icons-vue'
+import {
+  ArrowDown,
+  ArrowLeft,
+  ArrowRight,
+  ArrowUp,
+  CircleCheckFilled,
+  Close,
+  Document,
+  InfoFilled,
+  Mic,
+  Search,
+  Setting,
+  WarningFilled,
+  VideoPause,
+  VideoPlay
+} from '@element-plus/icons-vue'
 // 加载状态
 const isLoading = ref(true)
 const isFiltering = ref(false)
@@ -192,12 +208,13 @@ onMounted(() => {
       clearInterval(progressTimer)
       
       // 进度完成后开始页面过渡
-      setTimeout(() => {
+        setTimeout(() => {
           filterPalaces() // 初始化筛选
           window.addEventListener('scroll', handleScroll)
           window.addEventListener('resize', handleResize)
           window.addEventListener('keydown', handleKeydown)
           window.addEventListener('locate-palace', handleLocatePalaceEvent)
+          window.addEventListener('hashchange', handleSharedPalaceHash)
           handleScroll() // 初始检查
           handleResize() // 初始检查
 
@@ -214,6 +231,7 @@ onMounted(() => {
           // 立即开始主内容淡入
           setTimeout(() => {
             isPageTransitioning.value = false
+            handleSharedPalaceHash()
           }, 100)
         }, 300)
       }, 200)
@@ -227,6 +245,10 @@ onUnmounted(() => {
   window.removeEventListener('resize', handleResize)
   window.removeEventListener('keydown', handleKeydown)
   window.removeEventListener('locate-palace', handleLocatePalaceEvent)
+  window.removeEventListener('hashchange', handleSharedPalaceHash)
+  if (shareToastTimer) {
+    clearTimeout(shareToastTimer)
+  }
 })
 
 // 处理定位到地图事件
@@ -689,6 +711,19 @@ const scrollPosition = ref(0)
 const showPalaceDialog = ref(false)
 const selectedPalace = ref(null)
 
+// 宫殿分享弹窗
+const showShareDialog = ref(false)
+const sharedPalace = ref(null)
+const shareStatus = ref('idle')
+const shareStatusMessage = ref('')
+const shareText = ref('')
+const shareLink = ref('')
+const shareCopyFailed = ref(false)
+const shareToastVisible = ref(false)
+const shareToastMessage = ref('')
+const shareToastType = ref('success')
+let shareToastTimer = null
+
 // 古今地名对应表弹窗
 const showPlaceNameDialog = ref(false)
 
@@ -747,6 +782,142 @@ const handlePalaceClick = (palace) => {
   showPalaceDialog.value = true
   // 添加到历史记录
   addHistoryRecord(palace)
+}
+
+const getShareBaseUrl = () => {
+  if (typeof window === 'undefined') return ''
+
+  const { origin, pathname, search } = window.location
+  return `${origin}${pathname}${search}`
+}
+
+const buildShareLink = (palace) => {
+  const palaceId = palace?.id || palace?.name || ''
+  const encodedPalaceId = encodeURIComponent(String(palaceId))
+  return `${getShareBaseUrl()}#palace=${encodedPalaceId}`
+}
+
+const buildShareText = (palace, link) => {
+  const buildYear = palace?.buildYear || palace?.yearBuilt || '未知'
+  const area = palace?.area || '未知'
+
+  return [
+    '🏯 宫阙万象·唐宋宫殿可视化平台',
+    `宫殿：${palace?.name || '未命名宫殿'}（${palace?.dynasty || '未知朝代'}）`,
+    `地址：${palace?.location || '未知'}`,
+    `建筑面积：${area}`,
+    `建造年份：${buildYear}`,
+    `分享链接：${link}`
+  ].join('\n')
+}
+
+const showShareToast = (message, type = 'success') => {
+  shareToastMessage.value = message
+  shareToastType.value = type
+  shareToastVisible.value = true
+
+  if (shareToastTimer) {
+    clearTimeout(shareToastTimer)
+  }
+
+  shareToastTimer = setTimeout(() => {
+    shareToastVisible.value = false
+    shareToastTimer = null
+  }, 1500)
+}
+
+const copyTextToClipboard = async (text) => {
+  if (!text) return false
+
+  try {
+    if (navigator.clipboard?.writeText && window.isSecureContext) {
+      await navigator.clipboard.writeText(text)
+      return true
+    }
+  } catch (error) {
+    // 继续走降级方案
+  }
+
+  try {
+    const textarea = document.createElement('textarea')
+    textarea.value = text
+    textarea.setAttribute('readonly', 'readonly')
+    textarea.style.position = 'fixed'
+    textarea.style.left = '-9999px'
+    textarea.style.opacity = '0'
+    document.body.appendChild(textarea)
+    textarea.select()
+    const success = document.execCommand('copy')
+    document.body.removeChild(textarea)
+    return success
+  } catch (error) {
+    return false
+  }
+}
+
+const copyShareContent = async () => {
+  if (!sharedPalace.value) return
+
+  shareStatus.value = 'loading'
+  shareStatusMessage.value = '正在生成分享链接'
+  shareCopyFailed.value = false
+
+  const success = await copyTextToClipboard(shareText.value)
+
+  if (success) {
+    shareStatus.value = 'success'
+    shareStatusMessage.value = '分享文案已复制'
+    showShareToast('分享文案已复制到剪贴板')
+  } else {
+    shareStatus.value = 'error'
+    shareStatusMessage.value = '复制失败，请手动复制链接'
+    shareCopyFailed.value = true
+    showShareToast('复制失败，请手动复制链接', 'error')
+  }
+}
+
+const openShareDialog = async (palace) => {
+  if (!palace) return
+
+  sharedPalace.value = palace
+  shareLink.value = buildShareLink(palace)
+  shareText.value = buildShareText(palace, shareLink.value)
+  shareStatus.value = 'loading'
+  shareStatusMessage.value = '正在生成分享链接'
+  shareCopyFailed.value = false
+  showShareDialog.value = true
+
+  await nextTick()
+  await copyShareContent()
+}
+
+const handleSharePalace = (palace) => {
+  openShareDialog(palace)
+}
+
+const handleSharePlatform = () => {
+  copyShareContent()
+}
+
+const closeShareDialog = () => {
+  showShareDialog.value = false
+}
+
+const handleSharedPalaceHash = () => {
+  if (typeof window === 'undefined') return
+
+  const hash = window.location.hash.replace(/^#/, '')
+  if (!hash) return
+
+  const params = new URLSearchParams(hash)
+  const palaceId = params.get('palace')
+
+  if (!palaceId) return
+
+  const palace = palaces.find((item) => String(item.id) === palaceId || item.name === palaceId)
+  if (palace) {
+    handlePalaceClick(palace)
+  }
 }
 
 // 滚动到地图区域并定位省份
@@ -1982,7 +2153,11 @@ const comparisonData = computed(() => {
                   :key="index"
                   style="margin-bottom: 1.5rem"
                 >
-                  <CardPalaceItem :poet="palace" @click="handlePalaceClick(palace)" />
+                  <CardPalaceItem
+                    :poet="palace"
+                    @click="handlePalaceClick(palace)"
+                    @share="handleSharePalace"
+                  />
                 </el-col>
               </el-row>
               
@@ -2010,7 +2185,7 @@ const comparisonData = computed(() => {
             <p class="description" style="letter-spacing: 2px">
               查看和管理您收藏的宫殿建筑，支持按收藏时间、朝代和建造时间排序。
             </p>
-            <ModuleFavorites />
+            <ModuleFavorites @share="handleSharePalace" />
           </section>
 
           <!-- 唐宋宫殿发展历程时间轴 - 增强版 -->
@@ -2283,6 +2458,20 @@ const comparisonData = computed(() => {
         </div>
       </el-dialog>
 
+      <!-- 宫殿分享弹窗 -->
+      <PalaceShareDialog
+        v-model:visible="showShareDialog"
+        :palace="sharedPalace"
+        :share-text="shareText"
+        :share-link="shareLink"
+        :status="shareStatus"
+        :status-message="shareStatusMessage"
+        :copy-failed="shareCopyFailed"
+        @close="closeShareDialog"
+        @copy="copyShareContent"
+        @platform-share="handleSharePlatform"
+      />
+
       <!-- 古今地名对应表弹窗 -->
       <el-dialog
         v-model="showPlaceNameDialog"
@@ -2473,6 +2662,23 @@ const comparisonData = computed(() => {
           <el-button type="primary" @click="showShortcutsDialog = false">确定</el-button>
         </template>
       </el-dialog>
+
+      <Teleport to="body">
+        <Transition name="share-toast">
+          <div
+            v-if="shareToastVisible"
+            class="share-toast"
+            :class="`share-toast--${shareToastType}`"
+          >
+            <el-icon class="share-toast-icon">
+              <CircleCheckFilled v-if="shareToastType === 'success'" />
+              <WarningFilled v-else-if="shareToastType === 'error'" />
+              <InfoFilled v-else />
+            </el-icon>
+            <span class="share-toast-text">{{ shareToastMessage }}</span>
+          </div>
+        </Transition>
+      </Teleport>
     </div>
   </div>
 </template>
@@ -2605,6 +2811,55 @@ const comparisonData = computed(() => {
 
 .main-content.fade-in {
   opacity: 1;
+}
+
+.share-toast {
+  position: fixed;
+  top: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 10050;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  padding: 0.9rem 1.15rem;
+  border-radius: 999px;
+  background: rgba(255, 250, 240, 0.94);
+  border: 1px solid rgba(230, 180, 34, 0.35);
+  box-shadow: 0 16px 40px rgba(44, 62, 80, 0.18);
+  backdrop-filter: blur(12px);
+  color: var(--text-primary);
+  min-width: min(92vw, 420px);
+  justify-content: center;
+}
+
+.share-toast--success {
+  border-color: rgba(46, 125, 50, 0.28);
+}
+
+.share-toast--error {
+  border-color: rgba(183, 28, 28, 0.28);
+}
+
+.share-toast-icon {
+  font-size: 1.15rem;
+}
+
+.share-toast-text {
+  font-size: 0.95rem;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.share-toast-enter-active,
+.share-toast-leave-active {
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+.share-toast-enter-from,
+.share-toast-leave-to {
+  opacity: 0;
+  transform: translateX(-50%) translateY(-12px) scale(0.98);
 }
 
 /* 卷轴展开动画 */

@@ -1,6 +1,7 @@
 <script setup>
+import { computed } from 'vue';
 import { usePalaceStore } from '@/stores/palace';
-import { Star, StarFilled } from '@element-plus/icons-vue';
+import { Share, Star, StarFilled } from '@element-plus/icons-vue';
 import { ElMessage } from 'element-plus';
 
 const props = defineProps({
@@ -10,8 +11,12 @@ const props = defineProps({
   }
 });
 
-const emit = defineEmits(['click']);
+const emit = defineEmits(['click', 'share']);
 const store = usePalaceStore();
+
+const dynastyColor = computed(() => {
+  return props.poet.dynasty === '唐代' ? '#c44536' : '#e6b422';
+});
 
 const handleClick = () => {
   emit('click', props.poet);
@@ -29,6 +34,11 @@ const handleFavorite = (event) => {
   }
 };
 
+const handleShare = (event) => {
+  event.stopPropagation();
+  emit('share', props.poet);
+};
+
 const isFavorite = () => {
   return store.isFavorite(props.poet.id);
 };
@@ -42,15 +52,27 @@ const isFavorite = () => {
         <el-tag :type="props.poet.dynasty === '唐代' ? 'danger' : 'warning'" effect="dark" size="small">
           {{ props.poet.dynasty }}
         </el-tag>
-        <el-button
-          type="text"
-          @click="handleFavorite"
-          class="favorite-btn"
-          :class="{ 'favorited': isFavorite() }"
-        >
-          <el-icon v-if="isFavorite()"><StarFilled /></el-icon>
-          <el-icon v-else><Star /></el-icon>
-        </el-button>
+        <el-tooltip content="分享该宫殿" placement="top">
+          <el-button
+            type="text"
+            @click="handleShare"
+            class="action-btn share-btn"
+            :style="{ color: dynastyColor }"
+          >
+            <el-icon><Share /></el-icon>
+          </el-button>
+        </el-tooltip>
+        <el-tooltip :content="isFavorite() ? '取消收藏' : '收藏该宫殿'" placement="top">
+          <el-button
+            type="text"
+            @click="handleFavorite"
+            class="action-btn favorite-btn"
+            :class="{ 'favorited': isFavorite() }"
+          >
+            <el-icon v-if="isFavorite()"><StarFilled /></el-icon>
+            <el-icon v-else><Star /></el-icon>
+          </el-button>
+        </el-tooltip>
       </div>
     </div>
     <div class="poet-info">
@@ -156,7 +178,7 @@ const isFavorite = () => {
 }
 
 /* 扩大点击区域 */
-.poet-card >>> .el-card__body {
+.poet-card :deep(.el-card__body) {
   padding: 1.5rem;
   height: 100%;
   display: flex;
@@ -173,16 +195,23 @@ const isFavorite = () => {
 .header-actions {
   display: flex;
   align-items: center;
-  gap: 0.5rem;
+  gap: 0.35rem;
 }
 
-.favorite-btn {
+.action-btn {
   transition: all 0.3s ease;
   font-size: 1.2rem;
+  padding: 0.2rem;
+  min-width: 0;
+  min-height: 0;
 }
 
-.favorite-btn:hover {
+.action-btn:hover {
   transform: scale(1.2);
+}
+
+.share-btn {
+  color: var(--text-accent);
 }
 
 .favorite-btn.favorited {

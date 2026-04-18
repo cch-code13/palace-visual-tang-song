@@ -38,6 +38,190 @@ const getBackgroundColor = () => {
   return getCurrentTheme() === 'dark' ? '#121212' : '#ffffff';
 };
 
+let highlightAnimationFrame = null; // 高亮动画帧
+const HIGHLIGHT_DURATION = 3000;
+const HIGHLIGHT_SCALE = 1.16;
+
+const cancelHighlightAnimation = () => {
+  if (highlightAnimationFrame !== null) {
+    cancelAnimationFrame(highlightAnimationFrame)
+    highlightAnimationFrame = null
+  }
+}
+
+const updateHighlightState = (dataIndex, scale) => {
+  cityViewLabelData = cityViewLabelData.map((item, idx) => ({
+    ...item,
+    highlightScale: idx === dataIndex ? scale : 1
+  }))
+
+  cityViewPalaceData = cityViewPalaceData.map((item, idx) => ({
+    ...item,
+    highlightScale: idx === dataIndex ? scale : 1
+  }))
+}
+
+const syncHighlightSeries = () => {
+  if (!myChart) return
+
+  myChart.setOption({
+    series: [
+      {},
+      {
+        data: cityViewLabelData.map(item => ({
+          palace: item.palace,
+          highlightScale: item.highlightScale || 1
+        }))
+      },
+      {
+        data: cityViewPalaceData.map(item => ({
+          name: item.name,
+          value: [
+            item.lng,
+            item.lat,
+            item.areaValue,
+            {
+              ...item,
+              highlightScale: item.highlightScale || 1
+            }
+          ]
+        }))
+      }
+    ]
+  }, { lazyUpdate: true, silent: true })
+}
+
+const hideHighlightOverlay = () => {
+  if (!myChart) return
+
+  myChart.setOption({
+    graphic: [
+      {
+        id: 'palace-locate-highlight',
+        invisible: true,
+        style: { opacity: 0 }
+      }
+    ]
+  }, { lazyUpdate: true, silent: true })
+}
+
+const renderHighlightOverlay = (dataIndex, scale) => {
+  if (!myChart || viewMode.value !== 'city') return
+
+  const item = cityViewLabelData[dataIndex]
+  if (!item) return
+
+  const position = myChart.convertToPixel({ geoIndex: 0 }, item.labelCoord)
+  if (!position || position.length < 2) return
+
+  const isDark = getCurrentTheme() === 'dark'
+  const overlayWidth = 80
+  const overlayHeight = 30
+  const glowColor = 'rgba(255, 215, 0, 0.55)'
+  const strokeColor = '#FFD700'
+  const fillColor = isDark ? 'rgba(30,30,30,0.42)' : 'rgba(255,255,255,0.42)'
+
+  myChart.setOption({
+    graphic: [
+      {
+        id: 'palace-locate-highlight',
+        type: 'group',
+        silent: true,
+        z: 9999,
+        position,
+        origin: [overlayWidth / 2, overlayHeight / 2],
+        scale: [scale, scale],
+        children: [
+          {
+            type: 'rect',
+            shape: {
+              x: -8,
+              y: -8,
+              width: overlayWidth + 16,
+              height: overlayHeight + 16,
+              r: 10
+            },
+            style: {
+              fill: 'rgba(255,255,255,0)',
+              stroke: glowColor,
+              lineWidth: 12,
+              shadowBlur: 24,
+              shadowColor: glowColor,
+              opacity: 0.9
+            }
+          },
+          {
+            type: 'rect',
+            shape: {
+              x: 0,
+              y: 0,
+              width: overlayWidth,
+              height: overlayHeight,
+              r: 6
+            },
+            style: {
+              fill: fillColor,
+              stroke: strokeColor,
+              lineWidth: 2.5,
+              shadowBlur: 14,
+              shadowColor: glowColor
+            }
+          },
+          {
+            type: 'text',
+            style: {
+              text: item.palace.name,
+              x: overlayWidth / 2,
+              y: overlayHeight / 2,
+              textAlign: 'center',
+              textVerticalAlign: 'middle',
+              fill: '#FFD700',
+              fontFamily: 'Noto Serif SC',
+              fontSize: 12,
+              fontWeight: 'bold',
+              shadowBlur: 4,
+              shadowColor: 'rgba(0, 0, 0, 0.18)'
+            }
+          }
+        ]
+      }
+    ]
+  }, { lazyUpdate: true, silent: true })
+}
+
+const animateHighlight = (dataIndex) => {
+  cancelHighlightAnimation()
+
+  const startTime = performance.now()
+
+  const step = (timestamp) => {
+    if (!myChart) return
+
+    const progress = Math.min((timestamp - startTime) / HIGHLIGHT_DURATION, 1)
+    const eased = 1 + (HIGHLIGHT_SCALE - 1) * (
+      progress < 0.5
+        ? 4 * progress * progress * progress
+        : 1 - Math.pow(-2 * progress + 2, 3) / 2
+    )
+
+    updateHighlightState(dataIndex, eased)
+    syncHighlightSeries()
+    renderHighlightOverlay(dataIndex, eased)
+
+    if (progress < 1) {
+      highlightAnimationFrame = requestAnimationFrame(step)
+    } else {
+      hideHighlightOverlay()
+      highlightAnimationFrame = null
+    }
+  }
+
+  updateHighlightState(dataIndex, 1)
+  syncHighlightSeries()
+  renderHighlightOverlay(dataIndex, 1)
+  highlightAnimationFrame = requestAnimationFrame(step)
+}
+
 onMounted(() => {
   initChart()
   window.addEventListener('resize', handleResize)
@@ -68,6 +252,7 @@ onUnmounted(() => {
     }
   }
   window.removeEventListener('resize', handleResize)
+  cancelHighlightAnimation()
   
   // 清理主题变化监听器
   if (window.themeObserverSongMap) {
@@ -515,12 +700,17 @@ const initChart = () => {
             const isDark = getCurrentTheme() === 'dark';
             const labelCoord = api.coord(item.labelCoord);
             const palace = item.palace;
+            const highlightScale = item.highlightScale || 1;
+            const highlightFactor = Math.max(0, Math.min(1, (highlightScale - 1) / (HIGHLIGHT_SCALE - 1)));
+            const isHighlighted = highlightFactor > 0.02;
             
             // 创建标签组
             const group = {
               type: 'group',
               id: `label-${idx}`,
               position: labelCoord,
+              origin: [40, 15],
+              scale: [highlightScale, highlightScale],
               children: [
                 // 标签背景
                 {
@@ -533,10 +723,10 @@ const initChart = () => {
                   },
                   style: {
                     fill: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)',
-                    stroke: '#B8860B',
-                    lineWidth: 1.5,
-                    shadowBlur: 5,
-                    shadowColor: 'rgba(255, 215, 0, 0.3)'
+                    stroke: isHighlighted ? '#FFD700' : '#B8860B',
+                    lineWidth: 1.5 + (highlightFactor * 1.2),
+                    shadowBlur: 5 + (highlightFactor * 10),
+                    shadowColor: `rgba(255, 215, 0, ${0.3 + (highlightFactor * 0.5)})`
                   },
                   emphasis: {
                     style: {
@@ -557,7 +747,7 @@ const initChart = () => {
                     y: 15,
                     textAlign: 'center',
                     verticalAlign: 'middle',
-                    fill: isDark ? '#ffffff' : '#333333',
+                    fill: highlightFactor > 0.6 ? '#FFD700' : (isDark ? '#ffffff' : '#333333'),
                     fontSize: 12,
                     fontFamily: 'Noto Serif SC',
                     fontWeight: 'bold'
@@ -574,7 +764,8 @@ const initChart = () => {
             return group;
           },
           data: labelData.map(item => ({
-            palace: item.palace
+            palace: item.palace,
+            highlightScale: item.highlightScale || 1
           })),
           animation: true,
           animationDuration: 1500,
@@ -604,7 +795,11 @@ const initChart = () => {
             name: palace.name,
             value: [palace.lng, palace.lat, palace.areaValue, palace]
           })),
-          symbolSize: 12,
+          symbolSize: function(val) {
+            const palace = val[3]
+            const scale = palace?.highlightScale || 1
+            return 12 * scale
+          },
           animation: true,
           animationDuration: 2000,
           animationEasing: 'cubicOut',
@@ -630,11 +825,11 @@ const initChart = () => {
     // 保存城市视图数据供后续高亮使用
     cityViewLabelData = labelData.map((item, idx) => ({
       ...item,
-      isHighlighted: false
+      highlightScale: 1
     }));
     cityViewPalaceData = cityPalaces.map((palace, idx) => ({
       ...palace,
-      isHighlighted: false
+      highlightScale: 1
     }));
   }
   
@@ -757,6 +952,7 @@ const initChart = () => {
       clearTimeout(highlightTimer);
       highlightTimer = null;
     }
+    cancelHighlightAnimation()
     
     // 查找对应的宫殿
     const palace = songPalaces.find(p => p.id === palaceId)
@@ -810,7 +1006,7 @@ const initChart = () => {
                 // 3秒后恢复默认样式
                 highlightTimer = setTimeout(() => {
                   if (myChart) {
-                    restoreDefaultStyle(palaceIndex);
+                    restoreDefaultStyle();
                   }
                 }, 3000);
               }
@@ -830,24 +1026,39 @@ const initChart = () => {
     }
   }
   
-  // 应用高亮效果 - 通过symbolSize实现
+  // 应用高亮效果 - 轻微放大并持续 3 秒
   function applyHighlightEffect(dataIndex) {
     if (!myChart || viewMode.value !== 'city') return;
-    
-    // 获取当前宫殿点位的大小，使用symbolSize回调函数根据索引判断
+
     myChart.setOption({
       series: [
-        {}, // 引导线系列不变
-        {}, // 标签系列不变
+        {
+          type: 'lines',
+          lineStyle: {
+            width: function(params) {
+              const idx = params.dataIndex;
+              return idx === dataIndex ? 4 : 2;
+            },
+            color: function(params) {
+              const idx = params.dataIndex;
+              return idx === dataIndex ? '#FFD700' : '#CC0000';
+            },
+            opacity: function(params) {
+              const idx = params.dataIndex;
+              return idx === dataIndex ? 1 : 0.8;
+            }
+          }
+        },
+        {},
         {
           type: 'effectScatter',
-          symbolSize: function(val, params) {
-            // 高亮的宫殿放大1.5倍
-            return params.dataIndex === dataIndex ? 18 : 12;
+          symbolSize: function(val) {
+            const palace = val[3]
+            const scale = palace?.highlightScale || 1
+            return 12 * scale
           },
           itemStyle: {
             color: function(params) {
-              // 高亮的宫殿使用更亮的颜色
               return params.dataIndex === dataIndex ? '#FFD700' : '#FF0000';
             },
             borderColor: function(params) {
@@ -865,100 +1076,18 @@ const initChart = () => {
           }
         }
       ]
-    });
-    
-    // 触发标签高亮 - 通过更新标签的样式数据
-    myChart.setOption({
-      series: [
-        {}, // 引导线系列不变
-        {
-          type: 'custom',
-          renderItem: function(params, api) {
-            const idx = params.dataIndex;
-            const item = cityViewLabelData[idx];
-            if (!item) return;
-            
-            const isDark = getCurrentTheme() === 'dark';
-            const labelCoord = api.coord(item.labelCoord);
-            const palace = item.palace;
-            const isHighlighted = idx === dataIndex;
-            
-            const group = {
-              type: 'group',
-              id: `label-${idx}`,
-              position: labelCoord,
-              children: [
-                {
-                  type: 'rect',
-                  id: `label-bg-${idx}`,
-                  shape: {
-                    width: 80,
-                    height: 30,
-                    r: 4
-                  },
-                  style: {
-                    fill: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)',
-                    stroke: isHighlighted ? '#FFD700' : '#CC0000',
-                    lineWidth: isHighlighted ? 2.5 : 1.5,
-                    shadowBlur: isHighlighted ? 15 : 5,
-                    shadowColor: isHighlighted ? 'rgba(255, 215, 0, 0.8)' : 'rgba(255, 0, 0, 0.3)'
-                  }
-                },
-                {
-                  type: 'text',
-                  id: `label-text-${idx}`,
-                  style: {
-                    text: palace.name,
-                    x: 40,
-                    y: 15,
-                    textAlign: 'center',
-                    verticalAlign: 'middle',
-                    fill: isHighlighted ? '#FFD700' : (isDark ? '#ffffff' : '#333333'),
-                    fontSize: 12,
-                    fontFamily: 'Noto Serif SC',
-                    fontWeight: 'bold'
-                  }
-                }
-              ]
-            };
-            
-            return group;
-          }
-        },
-        {} // 宫殿点位系列不变
-      ]
-    });
-    
-    // 高亮引导线
-    myChart.setOption({
-      series: [
-        {
-          type: 'lines',
-          lineStyle: {
-            width: function(params) {
-              // 高亮的引导线加粗
-              const idx = params.dataIndex;
-              return idx === dataIndex ? 4 : 2;
-            },
-            color: function(params) {
-              const idx = params.dataIndex;
-              return idx === dataIndex ? '#FFD700' : '#CC0000';
-            },
-            opacity: function(params) {
-              const idx = params.dataIndex;
-              return idx === dataIndex ? 1 : 0.8;
-            }
-          }
-        },
-        {},
-        {}
-      ]
-    });
+    }, { lazyUpdate: true })
+
+    animateHighlight(dataIndex)
   }
   
   // 恢复默认样式
-  function restoreDefaultStyle(dataIndex) {
+  function restoreDefaultStyle() {
     if (!myChart) return;
+
+    cancelHighlightAnimation()
+    updateHighlightState(-1, 1)
+    syncHighlightSeries()
     
     myChart.setOption({
       series: [
@@ -970,62 +1099,14 @@ const initChart = () => {
             opacity: 0.8
           }
         },
-        {
-          type: 'custom',
-          renderItem: function(params, api) {
-            const idx = params.dataIndex;
-            const item = cityViewLabelData[idx];
-            if (!item) return;
-            
-            const isDark = getCurrentTheme() === 'dark';
-            const labelCoord = api.coord(item.labelCoord);
-            const palace = item.palace;
-            
-            const group = {
-              type: 'group',
-              id: `label-${idx}`,
-              position: labelCoord,
-              children: [
-                {
-                  type: 'rect',
-                  id: `label-bg-${idx}`,
-                  shape: {
-                    width: 80,
-                    height: 30,
-                    r: 4
-                  },
-                  style: {
-                    fill: isDark ? 'rgba(30,30,30,0.85)' : 'rgba(255,255,255,0.85)',
-                    stroke: '#CC0000',
-                    lineWidth: 1.5,
-                    shadowBlur: 5,
-                    shadowColor: 'rgba(255, 0, 0, 0.3)'
-                  }
-                },
-                {
-                  type: 'text',
-                  id: `label-text-${idx}`,
-                  style: {
-                    text: palace.name,
-                    x: 40,
-                    y: 15,
-                    textAlign: 'center',
-                    verticalAlign: 'middle',
-                    fill: isDark ? '#ffffff' : '#333333',
-                    fontSize: 12,
-                    fontFamily: 'Noto Serif SC',
-                    fontWeight: 'bold'
-                  }
-                }
-              ]
-            };
-            
-            return group;
-          }
-        },
+        {},
         {
           type: 'effectScatter',
-          symbolSize: 12,
+          symbolSize: function(val) {
+            const palace = val[3]
+            const scale = palace?.highlightScale || 1
+            return 12 * scale
+          },
           itemStyle: {
             color: '#FF0000',
             borderColor: '#CC0000',
@@ -1036,7 +1117,7 @@ const initChart = () => {
           }
         }
       ]
-    });
+    }, { lazyUpdate: true });
   }
   
   // 暴露定位城市的方法（保持向后兼容）

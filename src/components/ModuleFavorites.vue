@@ -7,6 +7,7 @@ import { Star, StarFilled, Delete, ArrowUp, ArrowDown, Filter } from '@element-p
 import { ElMessage, ElEmpty, ElSelect, ElOption } from 'element-plus';
 
 const store = usePalaceStore();
+const emit = defineEmits(['share']);
 
 const sortBy = ref('time'); // time, dynasty, buildTime
 const sortOrder = ref('desc'); // asc, desc
@@ -93,6 +94,10 @@ const removeFavorite = (palace) => {
 const handlePalaceClick = (palace) => {
   selectedPalace.value = palace;
   drawerVisible.value = true;
+};
+
+const handleSharePalace = (palace) => {
+  emit('share', palace);
 };
 
 // 关闭抽屉
@@ -192,7 +197,7 @@ const handleLocate = (palace) => {
     
     <div v-else class="favorites-grid">
       <div v-for="palace in favoritePalaces" :key="palace.id" class="favorite-item">
-        <CardPalaceItem :poet="palace" @click="handlePalaceClick" />
+        <CardPalaceItem :poet="palace" @click="handlePalaceClick" @share="handleSharePalace" />
         <el-button
           type="danger"
           size="small"
