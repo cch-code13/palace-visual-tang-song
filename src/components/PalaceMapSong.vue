@@ -40,7 +40,8 @@ const getBackgroundColor = () => {
 
 let highlightAnimationFrame = null; // 高亮动画帧
 const HIGHLIGHT_DURATION = 3000;
-const HIGHLIGHT_SCALE = 1.16;
+const HIGHLIGHT_SCALE = 1.2; // 增加缩放幅度
+const PULSE_COUNT = 3; // 脉冲次数
 
 const cancelHighlightAnimation = () => {
   if (highlightAnimationFrame !== null) {
@@ -105,7 +106,7 @@ const hideHighlightOverlay = () => {
   }, { lazyUpdate: true, silent: true })
 }
 
-const renderHighlightOverlay = (dataIndex, scale) => {
+const renderHighlightOverlay = (dataIndex, scale, pulseScale = 0) => {
   if (!myChart || viewMode.value !== 'city') return
 
   const item = cityViewLabelData[dataIndex]
@@ -121,6 +122,82 @@ const renderHighlightOverlay = (dataIndex, scale) => {
   const strokeColor = '#FFD700'
   const fillColor = isDark ? 'rgba(30,30,30,0.42)' : 'rgba(255,255,255,0.42)'
 
+  // 外圈扩散效果
+  const rippleRadius = 40 + pulseScale * 30
+  const rippleOpacity = 0.6 * (1 - pulseScale)
+
+  const children = [
+    // 外圈扩散圆环
+    {
+      type: 'circle',
+      shape: {
+        cx: overlayWidth / 2,
+        cy: overlayHeight / 2,
+        r: rippleRadius
+      },
+      style: {
+        fill: 'transparent',
+        stroke: 'rgba(255, 215, 0, 0.6)',
+        lineWidth: 3,
+        opacity: rippleOpacity
+      }
+    },
+    // 内部发光矩形
+    {
+      type: 'rect',
+      shape: {
+        x: -8,
+        y: -8,
+        width: overlayWidth + 16,
+        height: overlayHeight + 16,
+        r: 10
+      },
+      style: {
+        fill: 'rgba(255,255,255,0)',
+        stroke: glowColor,
+        lineWidth: 12,
+        shadowBlur: 24,
+        shadowColor: glowColor,
+        opacity: 0.9
+      }
+    },
+    // 标签背景
+    {
+      type: 'rect',
+      shape: {
+        x: 0,
+        y: 0,
+        width: overlayWidth,
+        height: overlayHeight,
+        r: 6
+      },
+      style: {
+        fill: fillColor,
+        stroke: strokeColor,
+        lineWidth: 2.5,
+        shadowBlur: 14,
+        shadowColor: glowColor
+      }
+    },
+    // 标签文字
+    {
+      type: 'text',
+      style: {
+        text: item.palace.name,
+        x: overlayWidth / 2,
+        y: overlayHeight / 2,
+        textAlign: 'center',
+        textVerticalAlign: 'middle',
+        fill: '#FFD700',
+        fontFamily: 'Noto Serif SC',
+        fontSize: 12,
+        fontWeight: 'bold',
+        shadowBlur: 4,
+        shadowColor: 'rgba(0, 0, 0, 0.18)'
+      }
+    }
+  ]
+
   myChart.setOption({
     graphic: [
       {
@@ -131,59 +208,7 @@ const renderHighlightOverlay = (dataIndex, scale) => {
         position,
         origin: [overlayWidth / 2, overlayHeight / 2],
         scale: [scale, scale],
-        children: [
-          {
-            type: 'rect',
-            shape: {
-              x: -8,
-              y: -8,
-              width: overlayWidth + 16,
-              height: overlayHeight + 16,
-              r: 10
-            },
-            style: {
-              fill: 'rgba(255,255,255,0)',
-              stroke: glowColor,
-              lineWidth: 12,
-              shadowBlur: 24,
-              shadowColor: glowColor,
-              opacity: 0.9
-            }
-          },
-          {
-            type: 'rect',
-            shape: {
-              x: 0,
-              y: 0,
-              width: overlayWidth,
-              height: overlayHeight,
-              r: 6
-            },
-            style: {
-              fill: fillColor,
-              stroke: strokeColor,
-              lineWidth: 2.5,
-              shadowBlur: 14,
-              shadowColor: glowColor
-            }
-          },
-          {
-            type: 'text',
-            style: {
-              text: item.palace.name,
-              x: overlayWidth / 2,
-              y: overlayHeight / 2,
-              textAlign: 'center',
-              textVerticalAlign: 'middle',
-              fill: '#FFD700',
-              fontFamily: 'Noto Serif SC',
-              fontSize: 12,
-              fontWeight: 'bold',
-              shadowBlur: 4,
-              shadowColor: 'rgba(0, 0, 0, 0.18)'
-            }
-          }
-        ]
+        children
       }
     ]
   }, { lazyUpdate: true, silent: true })
@@ -198,15 +223,20 @@ const animateHighlight = (dataIndex) => {
     if (!myChart) return
 
     const progress = Math.min((timestamp - startTime) / HIGHLIGHT_DURATION, 1)
-    const eased = 1 + (HIGHLIGHT_SCALE - 1) * (
-      progress < 0.5
-        ? 4 * progress * progress * progress
-        : 1 - Math.pow(-2 * progress + 2, 3) / 2
-    )
+    
+    // 呼吸脉冲动画 - 先放大再缩小，重复多次
+    const pulseProgress = (progress * PULSE_COUNT) % 1
+    const pulseScale = pulseProgress < 0.5 
+      ? 1 + (HIGHLIGHT_SCALE - 1) * Math.sin(pulseProgress * Math.PI)
+      : 1 + (HIGHLIGHT_SCALE - 1) * Math.sin((1 - pulseProgress) * Math.PI)
+    
+    // 外圈扩散效果
+    const rippleProgress = (progress * PULSE_COUNT) % 1
+    const rippleScale = rippleProgress
 
-    updateHighlightState(dataIndex, eased)
+    updateHighlightState(dataIndex, pulseScale)
     syncHighlightSeries()
-    renderHighlightOverlay(dataIndex, eased)
+    renderHighlightOverlay(dataIndex, pulseScale, rippleScale)
 
     if (progress < 1) {
       highlightAnimationFrame = requestAnimationFrame(step)
@@ -218,7 +248,7 @@ const animateHighlight = (dataIndex) => {
 
   updateHighlightState(dataIndex, 1)
   syncHighlightSeries()
-  renderHighlightOverlay(dataIndex, 1)
+  renderHighlightOverlay(dataIndex, 1, 0)
   highlightAnimationFrame = requestAnimationFrame(step)
 }
 
@@ -1017,9 +1047,9 @@ const initChart = () => {
         // 显示成功提示
         setTimeout(() => {
           ElMessage({
-            message: `✅ 已成功定位到【${palace.name}】`,
+            message: `已为您跳转至 ${palace.name}`,
             type: 'success',
-            duration: 1500
+            duration: 3000
           });
         }, 1500);
       }

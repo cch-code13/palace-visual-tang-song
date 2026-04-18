@@ -47,12 +47,16 @@ const dialogVisible = computed({
 
 const shareTextAreaWrap = ref(null)
 
-const themeClass = computed(() => {
-  if (props.palace?.dynasty === '宋代') {
-    return 'song-theme'
-  }
+const isDarkTheme = computed(() => {
+  return document.documentElement.classList.contains('dark')
+})
 
-  return 'tang-theme'
+const dynastyColor = computed(() => {
+  return props.palace?.dynasty === '宋代' ? '#D4AF37' : '#D43A30'
+})
+
+const dynastyAccentColor = computed(() => {
+  return props.palace?.dynasty === '宋代' ? 'rgba(212, 175, 55, 0.15)' : 'rgba(212, 58, 48, 0.15)'
 })
 
 const statusIcon = computed(() => {
@@ -86,7 +90,21 @@ const handleCopyText = async () => {
 }
 
 const handlePlatformShare = (platform) => {
-  emit('platform-share', platform)
+  let message = ''
+  switch (platform) {
+    case '微信':
+      message = '分享文案已复制，可打开微信粘贴分享。'
+      break
+    case 'QQ':
+      message = '分享文案已复制，可打开 QQ 粘贴分享。'
+      break
+    case '微博':
+      message = '分享文案已复制，可打开微博粘贴分享。'
+      break
+    default:
+      message = '分享文案已复制到剪贴板。'
+  }
+  emit('platform-share', { platform, message })
 }
 
 const handleClose = () => {
@@ -99,6 +117,7 @@ const handleClose = () => {
   <el-dialog
     v-model="dialogVisible"
     class="palace-share-dialog"
+    :class="{ 'is-dark': isDarkTheme }"
     custom-class="palace-share-dialog"
     :close-on-click-modal="false"
     :close-on-press-escape="true"
@@ -107,17 +126,17 @@ const handleClose = () => {
     top="10vh"
   >
     <template #header>
-      <div class="share-dialog-header" :class="themeClass">
+      <div class="share-dialog-header">
         <p class="share-dialog-eyebrow">宫阙万象·唐宋宫殿数据可视化平台</p>
-        <h3 class="share-dialog-title">
+        <h3 class="share-dialog-title" :style="{ color: dynastyColor }">
           分享【{{ palace?.name || '宫殿' }}】
         </h3>
       </div>
     </template>
 
-    <div class="share-dialog-body" :class="[themeClass, { 'copy-failed': copyFailed }]">
+    <div class="share-dialog-body">
       <div class="share-status-card">
-        <div class="share-status-icon" :class="status">
+        <div class="share-status-icon" :class="status" :style="{ background: `linear-gradient(135deg, ${dynastyColor}, ${dynastyColor}cc)` }">
           <el-icon v-if="status === 'loading'" class="is-loading">
             <Loading />
           </el-icon>
@@ -127,17 +146,22 @@ const handleClose = () => {
         </div>
 
         <div class="share-status-copy">
-          <p class="share-status-title">{{ statusMessage || '正在生成分享链接' }}</p>
+          <p class="share-status-title">分享到【{{ palace?.name || '宫殿' }}】详情页</p>
           <p class="share-status-subtitle">
-            点击文案框可再次复制，或使用下方平台按钮快速分发
+            点击复制按钮分享给朋友，或使用下方平台快速分发
           </p>
         </div>
       </div>
 
-      <div class="share-preview-card">
+      <div class="share-preview-card" :class="{ 'copy-failed': copyFailed }">
         <div class="share-section-header">
           <span>分享文案</span>
-          <el-button type="text" class="copy-link-button" @click="handleCopyText">
+          <el-button
+            type="text"
+            class="copy-link-button"
+            :style="{ color: dynastyColor }"
+            @click="handleCopyText"
+          >
             复制文案
           </el-button>
         </div>
@@ -177,7 +201,16 @@ const handleClose = () => {
 
     <template #footer>
       <div class="share-dialog-footer">
-        <el-button class="share-close-button" @click="handleClose">关闭</el-button>
+        <el-button
+          class="share-close-button"
+          :style="{
+            color: dynastyColor,
+            borderColor: dynastyColor
+          }"
+          @click="handleClose"
+        >
+          关闭
+        </el-button>
       </div>
     </template>
   </el-dialog>
@@ -194,6 +227,7 @@ const handleClose = () => {
   letter-spacing: 0.18em;
   text-transform: uppercase;
   opacity: 0.8;
+  color: var(--text-body);
 }
 
 .share-dialog-title {
@@ -202,16 +236,6 @@ const handleClose = () => {
   font-size: 1.35rem;
   font-weight: 700;
   letter-spacing: 0.08em;
-}
-
-.tang-theme .share-dialog-eyebrow,
-.tang-theme .share-dialog-title {
-  color: #c44536;
-}
-
-.song-theme .share-dialog-eyebrow,
-.song-theme .share-dialog-title {
-  color: #e6b422;
 }
 
 .share-dialog-body {
@@ -226,9 +250,9 @@ const handleClose = () => {
   gap: 1rem;
   padding: 1rem 1.1rem;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.12);
-  border: 1px solid rgba(230, 180, 34, 0.18);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  background: var(--share-card-bg);
+  border: 1px solid var(--share-border);
+  box-shadow: var(--share-shadow);
 }
 
 .share-status-icon {
@@ -240,21 +264,20 @@ const handleClose = () => {
   justify-content: center;
   font-size: 1.5rem;
   color: #ffffff;
-  background: linear-gradient(135deg, #c44536, #e6b422);
-  box-shadow: 0 12px 24px rgba(196, 69, 54, 0.24);
+  box-shadow: 0 12px 24px rgba(0, 0, 0, 0.15);
   flex: 0 0 auto;
 }
 
 .share-status-icon.loading {
-  background: linear-gradient(135deg, #c44536, #b8860b);
+  background: linear-gradient(135deg, #888, #666) !important;
 }
 
 .share-status-icon.success {
-  background: linear-gradient(135deg, #2e7d32, #4caf50);
+  background: linear-gradient(135deg, #2e7d32, #4caf50) !important;
 }
 
 .share-status-icon.error {
-  background: linear-gradient(135deg, #b71c1c, #ef5350);
+  background: linear-gradient(135deg, #b71c1c, #ef5350) !important;
 }
 
 .share-status-copy {
@@ -277,8 +300,13 @@ const handleClose = () => {
 .share-preview-card {
   padding: 1rem;
   border-radius: 16px;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(230, 180, 34, 0.18);
+  background: var(--share-card-bg);
+  border: 1px solid var(--share-border);
+  transition: border-color 0.2s ease;
+}
+
+.share-preview-card.copy-failed {
+  border-color: #ef5350;
 }
 
 .share-section-header {
@@ -295,27 +323,12 @@ const handleClose = () => {
   border: 0;
   background: transparent;
   font-weight: 600;
-  transition: color 0.2s ease, background-color 0.2s ease;
+  transition: all 0.2s ease;
 }
 
-.tang-theme .copy-link-button,
-.song-theme .copy-link-button {
-  color: #c41e3a;
-}
-
-.tang-theme .copy-link-button:hover,
-.song-theme .copy-link-button:hover {
-  color: #a01830;
-  background: rgba(196, 30, 58, 0.15);
-}
-
-.song-theme .copy-link-button {
-  color: #ffd700;
-}
-
-.song-theme .copy-link-button:hover {
-  color: #daa520;
-  background: rgba(255, 215, 0, 0.15);
+.copy-link-button:hover {
+  opacity: 0.8;
+  background: var(--share-hover-bg);
 }
 
 .share-textarea-wrap {
@@ -323,43 +336,26 @@ const handleClose = () => {
 }
 
 .share-textarea :deep(.el-textarea__inner) {
-  border: 1px solid transparent;
+  border: 1px solid var(--share-input-border);
   border-radius: 14px;
-  background: #fff9f0;
-  color: #333333;
+  background: var(--share-input-bg);
+  color: var(--share-input-text);
   line-height: 1.7;
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.7);
-  transition: border-color 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
 }
 
 .share-textarea-wrap:hover .share-textarea :deep(.el-textarea__inner),
 .share-textarea-wrap:focus-within .share-textarea :deep(.el-textarea__inner) {
-  border-color: #c41e3a;
-  box-shadow: 0 0 0 3px rgba(196, 30, 58, 0.12);
-}
-
-.song-theme .share-textarea :deep(.el-textarea__inner) {
-  background: #2a2a3a;
-  color: #e0e0e0;
-}
-
-.song-theme .share-textarea-wrap:hover .share-textarea :deep(.el-textarea__inner),
-.song-theme .share-textarea-wrap:focus-within .share-textarea :deep(.el-textarea__inner) {
-  border-color: #ffd700;
-  box-shadow: 0 0 0 3px rgba(255, 215, 0, 0.12);
-}
-
-.copy-failed .share-textarea :deep(.el-textarea__inner) {
-  border-color: #ef5350;
-  box-shadow: 0 0 0 3px rgba(239, 83, 80, 0.12);
+  border-color: var(--dynasty-color);
+  box-shadow: 0 0 0 3px var(--dynasty-color-bg);
 }
 
 .share-link-box {
   margin-top: 0.9rem;
   padding: 0.8rem 0.9rem;
   border-radius: 12px;
-  background: rgba(230, 180, 34, 0.08);
-  border: 1px dashed rgba(230, 180, 34, 0.35);
+  background: var(--share-link-bg);
+  border: 1px dashed var(--share-link-border);
 }
 
 .share-link-label {
@@ -367,7 +363,7 @@ const handleClose = () => {
   margin-bottom: 0.35rem;
   font-size: 0.82rem;
   font-weight: 700;
-  color: var(--text-accent);
+  color: var(--dynasty-color);
 }
 
 .share-link-value {
@@ -438,6 +434,12 @@ const handleClose = () => {
 
 .share-close-button {
   min-width: 120px;
+  background: transparent;
+  transition: all 0.2s ease;
+}
+
+.share-close-button:hover {
+  background: var(--share-hover-bg) !important;
 }
 
 @media (max-width: 640px) {
@@ -453,35 +455,74 @@ const handleClose = () => {
 :deep(.palace-share-dialog) {
   border-radius: 20px;
   overflow: hidden;
+  background: var(--share-dialog-bg);
+  border: 1px solid var(--share-border);
 }
 
 :deep(.palace-share-dialog .el-dialog__header) {
-  border-bottom: 1px solid rgba(230, 180, 34, 0.25);
+  border-bottom: 1px solid var(--share-border);
   padding: 1.4rem 1.5rem 1rem;
+  background: var(--share-dialog-bg);
 }
 
 :deep(.palace-share-dialog .el-dialog__body) {
   padding: 1.2rem 1.5rem 0.5rem;
+  background: var(--share-dialog-bg);
 }
 
 :deep(.palace-share-dialog .el-dialog__footer) {
   padding: 0.6rem 1.5rem 1.4rem;
-  border-top: 1px solid rgba(230, 180, 34, 0.18);
-}
-
-.tang-theme :deep(.palace-share-dialog .el-dialog__header),
-.tang-theme :deep(.palace-share-dialog .el-dialog__footer) {
-  background: rgba(255, 250, 240, 0.96);
-}
-
-.song-theme :deep(.palace-share-dialog .el-dialog__header),
-.song-theme :deep(.palace-share-dialog .el-dialog__footer) {
-  background: rgba(255, 248, 235, 0.96);
+  border-top: 1px solid var(--share-border);
+  background: var(--share-dialog-bg);
 }
 
 @media (max-width: 640px) {
   :deep(.palace-share-dialog) {
     width: calc(100vw - 16px) !important;
   }
+}
+</style>
+
+<style>
+:root {
+  --dynasty-color: #D43A30;
+  --dynasty-color-bg: rgba(212, 58, 48, 0.12);
+  --share-hover-bg: rgba(212, 58, 48, 0.08);
+  
+  --share-dialog-bg: #FFFFFF;
+  --share-card-bg: rgba(255, 255, 255, 0.6);
+  --share-border: rgba(230, 180, 34, 0.25);
+  --share-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  
+  --share-input-bg: #F9F6F0;
+  --share-input-border: transparent;
+  --share-input-text: #333333;
+  
+  --share-link-bg: rgba(230, 180, 34, 0.08);
+  --share-link-border: rgba(230, 180, 34, 0.35);
+  
+  --text-primary: #333333;
+  --text-body: #666666;
+}
+
+.dark {
+  --dynasty-color: #D4AF37;
+  --dynasty-color-bg: rgba(212, 175, 55, 0.12);
+  --share-hover-bg: rgba(212, 175, 55, 0.08);
+  
+  --share-dialog-bg: #1E1E1E;
+  --share-card-bg: rgba(45, 45, 45, 0.6);
+  --share-border: rgba(230, 180, 34, 0.18);
+  --share-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+  
+  --share-input-bg: #2D2D2D;
+  --share-input-border: transparent;
+  --share-input-text: #F5F5F5;
+  
+  --share-link-bg: rgba(230, 180, 34, 0.08);
+  --share-link-border: rgba(230, 180, 34, 0.35);
+  
+  --text-primary: #F5F5F5;
+  --text-body: #AAAAAA;
 }
 </style>

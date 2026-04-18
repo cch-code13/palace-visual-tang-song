@@ -855,7 +855,7 @@ const copyTextToClipboard = async (text) => {
   }
 }
 
-const copyShareContent = async () => {
+const copyShareContent = async (customMessage = '分享文案已复制到剪贴板') => {
   if (!sharedPalace.value) return
 
   shareStatus.value = 'loading'
@@ -867,7 +867,7 @@ const copyShareContent = async () => {
   if (success) {
     shareStatus.value = 'success'
     shareStatusMessage.value = '分享文案已复制'
-    showShareToast('分享文案已复制到剪贴板')
+    showShareToast(customMessage)
   } else {
     shareStatus.value = 'error'
     shareStatusMessage.value = '复制失败，请手动复制链接'
@@ -895,8 +895,8 @@ const handleSharePalace = (palace) => {
   openShareDialog(palace)
 }
 
-const handleSharePlatform = () => {
-  copyShareContent()
+const handleSharePlatform = ({ platform, message }) => {
+  copyShareContent(message)
 }
 
 const closeShareDialog = () => {
@@ -2815,7 +2815,7 @@ const comparisonData = computed(() => {
 
 .share-toast {
   position: fixed;
-  top: 24px;
+  top: 124px;
   left: 50%;
   transform: translateX(-50%);
   z-index: 10050;
@@ -2823,37 +2823,54 @@ const comparisonData = computed(() => {
   align-items: center;
   gap: 0.65rem;
   padding: 0.9rem 1.15rem;
-  border-radius: 999px;
-  background: rgba(255, 250, 240, 0.94);
-  border: 1px solid rgba(230, 180, 34, 0.35);
+  border-radius: 12px;
   box-shadow: 0 16px 40px rgba(44, 62, 80, 0.18);
   backdrop-filter: blur(12px);
   color: var(--text-primary);
   min-width: min(92vw, 420px);
   justify-content: center;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* 浅色主题 */
+.share-toast {
+  background: rgba(255, 249, 240, 0.95);
+  border: 1px solid rgba(229, 62, 62, 0.3);
+}
+
+/* 深色主题 */
+.dark .share-toast {
+  background: rgba(20, 20, 30, 0.95);
+  border: 1px solid rgba(212, 175, 55, 0.3);
+  color: #F0F0F0;
 }
 
 .share-toast--success {
-  border-color: rgba(46, 125, 50, 0.28);
+  border-color: rgba(46, 125, 50, 0.3);
 }
 
 .share-toast--error {
-  border-color: rgba(183, 28, 28, 0.28);
+  border-color: rgba(183, 28, 28, 0.3);
 }
 
 .share-toast-icon {
-  font-size: 1.15rem;
+  font-size: 24px;
+  color: #2e7d32;
 }
 
 .share-toast-text {
-  font-size: 0.95rem;
   font-weight: 600;
   letter-spacing: 0.02em;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 320px;
 }
 
 .share-toast-enter-active,
 .share-toast-leave-active {
-  transition: opacity 0.25s ease, transform 0.25s ease;
+  transition: opacity 0.3s ease, transform 0.3s ease;
 }
 
 .share-toast-enter-from,
